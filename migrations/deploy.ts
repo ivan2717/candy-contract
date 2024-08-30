@@ -3,8 +3,9 @@
 // configured from the workspace's Anchor.toml.
 
 // const anchor = require("@coral-xyz/anchor");
-import anchor from "@coral-xyz/anchor"
+import anchor, { Program } from "@coral-xyz/anchor"
 import * as fs from "fs"
+import { CandyNftFactory } from "../target/types/candy_nft_factory";
 
 
 
@@ -14,8 +15,15 @@ module.exports = async function (provider) {
 
   // Add your deploy script here.
 
-  const idl = JSON.parse(fs.readFileSync("../target/idl/candy_contract.json","utf8"))
-  const pg = new anchor.Program(idl)
-  await pg.methods.initialize().rpc()
+  // const idl = JSON.parse(fs.readFileSync("../target/idl/candy_contract.json","utf8"))
+  // const pg = new anchor.Program(idl)
+  // await pg.methods.initialize().rpc()
+  
+  const candyNftFactory = anchor.workspace.CandyNftFactory as Program<CandyNftFactory>
+
+  const id = candyNftFactory.programId
+  console.log("=======",id)
+
+
   
 };

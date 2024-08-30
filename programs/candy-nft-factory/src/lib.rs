@@ -5,34 +5,58 @@ use anchor_spl::metadata::{
     CreateMetadataAccountsV3, Metadata,
 };
 use anchor_spl::token::{mint_to, Mint, MintTo, Token, TokenAccount};
-use mpl_token_metadata::types::{Collection, Creator, DataV2};
+use mpl_token_metadata::types::{DataV2};
 
-declare_id!("5s22UgQDtLFvyy67X2jgV3XhhPdTEBR7drGZe8wf81ec");
+// declare_id!("5s22UgQDtLFvyy67X2jgV3XhhPdTEBR7drGZe8wf81ec");
+declare_id!("4MBWG1wb4pvyyV88RS1Es5PbZFE2eLawFEU81x8dBz6j");
 
-const OWNER: &str = "5s22UgQDtLFvyy67X2jgV3XhhPdTEBR7drGZe8wf81ec";
+// const OWNER: &str = "5s22UgQDtLFvyy67X2jgV3XhhPdTEBR7drGZe8wf81ec";
+//metaplex token metadat program id
+// const TOKEN_METADATA_PROGRAM_ID: &str = "metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s";
 
 #[program]
 pub mod candy_nft_factory {
     use super::*;
 
-    pub fn initialize(ctx: Context<Initialize>) -> Result<()> {
-        msg!("Greetings from: {:?}", ctx.program_id);
+    pub fn init_phase(
+        ctx:Context<InitPhase>,
+        name:String,
+        symbol:String,
+        base_uri:String,
+        max_supply:u64,
+
+    ) -> Result<()>{
+        ctx.accounts.phase.phase_id += 1;
+        ctx.accounts.phase.max_supply = max_supply;
+        ctx.accounts.phase.name = name;
+        ctx.accounts.phase.symbol = symbol;
+        ctx.accounts.phase.base_uri = base_uri;
+        ctx.accounts.phase.current_nft_id = 0;
         Ok(())
     }
 
     pub fn init_nft(
         ctx:Context<InitNFT>,
-        id: u64,
-        name: String,
-        symbol: String,
-        uri: String,
-        max_supply:u64,
+        // id: u64,
+        // name: String,
+        // symbol: String,
+        // uri: String,
+        // max_supply:u64,
     ) -> Result<()>{
         
-        let id_bytes = id.to_le_bytes();
-        let seeds = &["mint".as_bytes(),id_bytes.as_ref(),&[ctx.bumps.mint],];
+        // let id_bytes = id.to_le_bytes();
+        if ctx.accounts.phase.current_nft_id >= ctx.accounts.phase.max_supply {
+            msg!("Maximum supply limit reached!");
+            return Err(CandyError::MaxSupplyLimit.into());
+        }
+        let nft_id = ctx.accounts.phase.current_nft_id;
+        let id_bytes = ctx.accounts.phase.current_nft_id.to_be_bytes();
+        ctx.accounts.phase.current_nft_id += 1;
+        let phase_id_bytes = ctx.accounts.phase.phase_id.to_be_bytes();
+        let seeds = &["mint".as_bytes(),id_bytes.as_ref(),phase_id_bytes.as_ref(),&[ctx.bumps.mint],];
 
-        let binding = [&seeds[..]];
+
+        let seeds_binding = [&seeds[..]];
         let cpi_context = CpiContext::new_with_signer(
             ctx.accounts.token_program.to_account_info(),
             MintTo { 
@@ -40,7 +64,7 @@ pub mod candy_nft_factory {
                 to: ctx.accounts.token_account.to_account_info(), 
                 authority: ctx.accounts.authority.to_account_info(),
             }, 
-            &binding
+            &seeds_binding
         );
         mint_to(cpi_context, 1)?;
 
@@ -55,13 +79,24 @@ pub mod candy_nft_factory {
                 system_program:ctx.accounts.system_program.to_account_info(),
                 rent:ctx.accounts.rent.to_account_info(),
             },
-            &binding,
+            &seeds_binding,
         );
 
+        // let data_v2 = DataV2 { 
+        //     name, 
+        //     symbol, 
+        //     uri, 
+        //     seller_fee_basis_points: 0,
+        //     creators: None,
+        //     collection: None,
+        //     uses: None
+        //  };
+   
+        // let phase = &ctx.accounts.phase;
         let data_v2 = DataV2 { 
-            name, 
-            symbol, 
-            uri, 
+            name:ctx.accounts.phase.name.clone(), 
+            symbol:ctx.accounts.phase.symbol.clone(), 
+            uri:ctx.accounts.phase.base_uri.clone() + &nft_id.to_string() +".png", 
             seller_fee_basis_points: 0,
             creators: None,
             collection: None,
@@ -83,10 +118,10 @@ pub mod candy_nft_factory {
                 token_program:ctx.accounts.token_program.to_account_info(),
                 rent:ctx.accounts.rent.to_account_info(),
             },
-            &binding
+            &seeds_binding
         );
 
-        create_master_edition_v3(cpi_context,Some(max_supply))?;
+        create_master_edition_v3(cpi_context,Some(0))?;
 
         Ok(())
     }
@@ -96,8 +131,36 @@ pub mod candy_nft_factory {
 
 }
 
+
+#[account]
+#[derive(InitSpace)]
+pub struct Phase {
+    pub phase_id: u64,
+    pub current_nft_id: u64,
+    pub max_supply:u64,
+    #[max_len(200)]
+    pub base_uri: String,
+    #[max_len(20)]
+    pub name: String,
+    #[max_len(10)]
+    pub symbol: String,
+}
+
 #[derive(Accounts)]
-pub struct Initialize {}
+pub struct InitPhase<'info> {
+    #[account(
+        init,
+        payer = authority,
+        space = 8 + Phase::INIT_SPACE,
+        seeds = ["phase".as_bytes()],
+        bump
+
+    )] // 计算存储空间大小
+    pub phase: Account<'info, Phase>,
+    #[account(mut)]
+    pub authority: Signer<'info>,
+    pub system_program: Program<'info, System>,
+}
 
 
 
@@ -138,6 +201,8 @@ pub struct InitNFT<'info>{
     pub token_program: Program<'info, Token>,
     pub metadata_program: Program<'info, Metadata>,
 
+    pub phase:Account<'info, Phase>,
+
     #[account(
         mut,
         seeds = [
@@ -168,5 +233,10 @@ pub struct InitNFT<'info>{
 }
 
 
+#[error_code]
+pub enum CandyError {
+    #[msg("Maximum supply limit reached!")]
+    MaxSupplyLimit,
+}
 
 

@@ -5,15 +5,16 @@ resolution = true
 skip-lint = false
 
 [programs.localnet]
-candy-nft-factory = "5s22UgQDtLFvyy67X2jgV3XhhPdTEBR7drGZe8wf81ec"
-candy_contract = "6huMJHBFBaUmKMRL7AVmN8BsiMkYfbtU7XqigaV2kuwG"
+candy-nft-factory = "4MBWG1wb4pvyyV88RS1Es5PbZFE2eLawFEU81x8dBz6j"
 
 [registry]
 url = "https://api.apr.dev"
 
+
 [provider]
 # cluster = "Localnet"
-cluster = "devnet"
+# cluster = "devnet"
+cluster = "https://solana-devnet.g.alchemy.com/v2/cJkK2SdqwYHK-8eElur2mNY1zbuN5do4"
 wallet = "~/.config/solana/id.json"
 
 [scripts]

@@ -5,10 +5,9 @@ use anchor_spl::metadata::{
     CreateMetadataAccountsV3, Metadata,
 };
 use anchor_spl::token::{mint_to, Mint, MintTo, Token, TokenAccount};
-use mpl_token_metadata::types::{DataV2};
+use mpl_token_metadata::types::DataV2;
 
-// declare_id!("5s22UgQDtLFvyy67X2jgV3XhhPdTEBR7drGZe8wf81ec");
-declare_id!("4MBWG1wb4pvyyV88RS1Es5PbZFE2eLawFEU81x8dBz6j");
+declare_id!("97v3R6ouvxi7Bp2MY3oC1mTrEyE1UJyHC9hdSe2W1WpK");
 
 // const OWNER: &str = "5s22UgQDtLFvyy67X2jgV3XhhPdTEBR7drGZe8wf81ec";
 //metaplex token metadat program id
@@ -35,9 +34,9 @@ pub mod candy_nft_factory {
         Ok(())
     }
 
-    pub fn init_nft(
-        ctx:Context<InitNFT>,
-        // id: u64,
+    pub fn mint_nft(
+        ctx:Context<MintNFT>,
+        nft_id: u64,
         // name: String,
         // symbol: String,
         // uri: String,
@@ -49,9 +48,17 @@ pub mod candy_nft_factory {
             msg!("Maximum supply limit reached!");
             return Err(CandyError::MaxSupplyLimit.into());
         }
-        let nft_id = ctx.accounts.phase.current_nft_id;
+
+        msg!("Nft id: current_nft_id=>{} nft_id=>{}",ctx.accounts.phase.current_nft_id,nft_id);
+ 
+        if nft_id != ctx.accounts.phase.current_nft_id {
+            msg!("Nft id Mismatch: {}",ctx.accounts.phase.current_nft_id);
+            return Err(CandyError::NftIdMismatch.into());
+        }
         let id_bytes = ctx.accounts.phase.current_nft_id.to_be_bytes();
-        ctx.accounts.phase.current_nft_id += 1;
+        ctx.accounts.phase.current_nft_id = nft_id + 1;
+
+        msg!("Nft id: current_nft_id=>{}",ctx.accounts.phase.current_nft_id);
         let phase_id_bytes = ctx.accounts.phase.phase_id.to_be_bytes();
         let seeds = &["mint".as_bytes(),id_bytes.as_ref(),phase_id_bytes.as_ref(),&[ctx.bumps.mint],];
 
@@ -168,8 +175,8 @@ pub struct InitPhase<'info> {
 
 
 #[derive(Accounts)]
-#[instruction(id: u64)]
-pub struct InitNFT<'info>{
+#[instruction(nft_id: u64)]
+pub struct MintNFT<'info>{
 
     #[account(mut)]
     pub authority:Signer<'info>,
@@ -183,7 +190,7 @@ pub struct InitNFT<'info>{
         mint::decimals = 0,
         mint::authority = authority,
         mint::freeze_authority = authority,
-        seeds = ["mint".as_bytes(), id.to_le_bytes().as_ref()], 
+        seeds = ["mint".as_bytes(), nft_id.to_le_bytes().as_ref()], 
         bump,
         )]
     pub mint: Account<'info, Mint>,
@@ -201,6 +208,7 @@ pub struct InitNFT<'info>{
     pub token_program: Program<'info, Token>,
     pub metadata_program: Program<'info, Metadata>,
 
+    #[account(mut)]
     pub phase:Account<'info, Phase>,
 
     #[account(
@@ -237,6 +245,8 @@ pub struct InitNFT<'info>{
 pub enum CandyError {
     #[msg("Maximum supply limit reached!")]
     MaxSupplyLimit,
+    #[msg("Nft id Mismatch")]
+    NftIdMismatch,
 }
 
 

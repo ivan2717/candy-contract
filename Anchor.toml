@@ -5,7 +5,8 @@ resolution = true
 skip-lint = false
 
 [programs.localnet]
-candy-nft-factory = "7sivPuNctFv6j32a1TniBZjtLfx5qaDZAuURjgkZoBDi"
+candy-nft-factory = "97v3R6ouvxi7Bp2MY3oC1mTrEyE1UJyHC9hdSe2W1WpK"
+
 
 [registry]
 url = "https://api.apr.dev"

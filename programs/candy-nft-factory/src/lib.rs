@@ -7,7 +7,7 @@ use anchor_spl::metadata::{
 use anchor_spl::token::{mint_to, Mint, MintTo, Token, TokenAccount};
 use mpl_token_metadata::types::DataV2;
 
-declare_id!("97v3R6ouvxi7Bp2MY3oC1mTrEyE1UJyHC9hdSe2W1WpK");
+declare_id!("3BQzyyuZAhfVNFtXa2gna6G6bBFD37beJw2MGuLQjvoX");
 
 // const OWNER: &str = "5s22UgQDtLFvyy67X2jgV3XhhPdTEBR7drGZe8wf81ec";
 //metaplex token metadat program id

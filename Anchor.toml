@@ -5,7 +5,7 @@ resolution = true
 skip-lint = false
 
 [programs.localnet]
-candy-nft-factory = "97v3R6ouvxi7Bp2MY3oC1mTrEyE1UJyHC9hdSe2W1WpK"
+candy-nft-factory = "3BQzyyuZAhfVNFtXa2gna6G6bBFD37beJw2MGuLQjvoX"
 
 
 [registry]
@@ -21,3 +21,4 @@ wallet = "~/.config/solana/id.json"
 [scripts]
 test = "yarn run ts-mocha -p ./tsconfig.json -t 1000000 tests/**/*.ts"
 mint = "ts-node scripts/mint.ts"
+init = "ts-node scripts/init.ts"

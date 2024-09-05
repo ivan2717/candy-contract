@@ -7,7 +7,7 @@ use anchor_spl::metadata::{
 use anchor_spl::token::{mint_to, Mint, MintTo, Token, TokenAccount};
 use mpl_token_metadata::types::DataV2;
 
-declare_id!("3BQzyyuZAhfVNFtXa2gna6G6bBFD37beJw2MGuLQjvoX");
+declare_id!("H7oF3YDDxWEVG9hPv5ZpKRponvg8sjd2ZQXRjA42FrsC");
 
 // const OWNER: &str = "5s22UgQDtLFvyy67X2jgV3XhhPdTEBR7drGZe8wf81ec";
 //metaplex token metadat program id
@@ -55,12 +55,14 @@ pub mod candy_nft_factory {
             msg!("Nft id Mismatch: {}",ctx.accounts.phase.current_nft_id);
             return Err(CandyError::NftIdMismatch.into());
         }
-        let id_bytes = ctx.accounts.phase.current_nft_id.to_be_bytes();
+        // let id_bytes = ctx.accounts.phase.current_nft_id.to_be_bytes();
         ctx.accounts.phase.current_nft_id = nft_id + 1;
 
         msg!("Nft id: current_nft_id=>{}",ctx.accounts.phase.current_nft_id);
-        let phase_id_bytes = ctx.accounts.phase.phase_id.to_be_bytes();
-        let seeds = &["mint".as_bytes(),id_bytes.as_ref(),phase_id_bytes.as_ref(),&[ctx.bumps.mint],];
+        // let phase_id_bytes = ctx.accounts.phase.phase_id.to_be_bytes();
+        // let seeds = &["mint".as_bytes(),id_bytes.as_ref(),phase_id_bytes.as_ref(),&[ctx.bumps.mint],];
+        // let seeds = &["mint".as_bytes(),&[ctx.bumps.mint],];
+        let seeds = &["mint".as_bytes(),&[ctx.bumps.nft_metadata],];
 
 
         let seeds_binding = [&seeds[..]];
@@ -191,6 +193,7 @@ pub struct MintNFT<'info>{
         mint::authority = authority,
         mint::freeze_authority = authority,
         seeds = ["mint".as_bytes(), nft_id.to_le_bytes().as_ref()], 
+        // seeds = ["mint".as_bytes()], 
         bump,
         )]
     pub mint: Account<'info, Mint>,

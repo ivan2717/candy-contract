@@ -1,14 +1,11 @@
-import * as anchor from "@coral-xyz/anchor";
+import * as anchor from '@coral-xyz/anchor';
 import { Program } from "@coral-xyz/anchor";
-import { CandyNftFactory } from "../target/types/candy_nft_factory";
-import dotenv from "dotenv";
-import { Connection, PublicKey, SystemProgram } from "@solana/web3.js";
-dotenv.config();
+import { PublicKey, SystemProgram } from "@solana/web3.js";
+import { assert } from "chai";
+import { CandyNftFactory } from "../target/types/candy_nft_factory"; // Ensure the path is correct for your project
 
-describe("candy-contract", () => {
-  // Configure the client to use the local cluster.
-  // anchor.setProvider(anchor.AnchorProvider.env());
-  const provider = anchor.AnchorProvider.env(); 
+describe("candy_nft_factory", () => {
+  const provider = anchor.AnchorProvider.local();
   anchor.setProvider(provider);
 
 
@@ -45,6 +42,11 @@ describe("candy-contract", () => {
   // });
 
   it("Mint NFT", async () => {
+    const nftId = new anchor.BN(0);
+    const tokenAccount = await anchor.utils.token.associatedAddress({
+      mint: mint.publicKey,
+      owner: provider.wallet.publicKey,
+    });
 
     const candyNftFactory = anchor.workspace.CandyNftFactory as Program<CandyNftFactory>
     console.log("programId======",candyNftFactory.programId)
@@ -70,28 +72,17 @@ describe("candy-contract", () => {
     const tx = await candyNftFactory.methods
       .mintNft(phaseId,nftId)
       .accounts({
-        authority: authority,
-        payer: authority,
-        phase:phasePda
+        authority: provider.wallet.publicKey,
+        payer: provider.wallet.publicKey,
+        metadataProgram: TOKEN_METADATA_PROGRAM_ID,
+        phase: phasePda,
       })
       .signers([])
-      .rpc()
+      .rpc();
 
-      console.log("Transaction signature:", tx);
-
-
-
-// 创建一个连接到 Solana 主网的实例
-  const connection = new Connection('https://solana-devnet.g.alchemy.com/v2/cJkK2SdqwYHK-8eElur2mNY1zbuN5do4', 'confirmed');
-
-  const accountInfo = await connection.getAccountInfo(phasePda,'confirmed')
-  console.log("accountInfo",Buffer.from(accountInfo.data))
-
-  console.log("accountInfo",accountInfo.data.toString('utf8'))
-
-  const a = await candyNftFactory.account.phase.fetch(phasePda)
-  console.log("a",a)
-
+    // Validate the NFT mint by fetching the mint account
+    const mintAccount = await program.provider.connection.getParsedAccountInfo(mint.publicKey);
+    assert.ok(mintAccount.value !== null);
   });
 });
 
@@ -101,8 +92,3 @@ function numberToBuffer(num: number): Buffer {
   phaseIdBytes.writeBigUInt64BE(BigInt(num)); 
   return phaseIdBytes
 }
-
-
-
-
-

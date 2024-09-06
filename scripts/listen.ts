@@ -1,28 +1,34 @@
 import * as anchor from '@coral-xyz/anchor';
 import { PublicKey, Connection, clusterApiUrl } from '@solana/web3.js';
-import { TOKEN_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID } from '@solana/spl-token';
+import { Program } from "@coral-xyz/anchor";
+import { CandyNftFactory } from "../target/types/candy_nft_factory";
 
 const provider = anchor.AnchorProvider.env();
 anchor.setProvider(provider);
 
-const program = anchor.workspace.CandyNftFactory as anchor.Program;
+const program = anchor.workspace.CandyNftFactory as Program<CandyNftFactory>
 const payer = provider.wallet.publicKey;
 
 const network = 'devnet'; // Choose 'mainnet-beta', 'testnet', or 'devnet'
+//const connection = new Connection('https://solana-devnet.g.alchemy.com/v2/cJkK2SdqwYHK-8eElur2mNY1zbuN5do4', 'confirmed');
 const connection = new Connection(clusterApiUrl(network), 'confirmed');
 
 const programId = program.programId;
+console.log(programId)
 
 async function listenForLogs() {
   console.log(`Listening for logs on program ${programId.toBase58()}...`);
 
   // Subscribe to program logs
   const subscriptionId = connection.onLogs(programId, (log) => {
+      console.log(log)
     if (log.err) {
       console.error("Error in transaction:", log.err);
       return;
     }
+      console.log(log)
 
+      /*
     const { result } = log;
     if (result) {
       console.log("Transaction logs:", result.value.logs);
@@ -45,14 +51,14 @@ async function listenForLogs() {
           }
         }
       });
-    }
-  }, 'jsonParsed');
+    }*/
+  });
 
   // Optional: Stop listening after some time
   setTimeout(() => {
-    connection.removeOnLogs(subscriptionId);
+    connection.removeOnLogsListener
     console.log('Stopped listening for logs.');
-  }, 60000); // Stop after 1 minute
+  }, 6000000); // Stop after 1 minute
 }
 
 async function run() {

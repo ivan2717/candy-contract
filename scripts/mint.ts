@@ -29,7 +29,7 @@ async function main() {
 
     const authority = provider.wallet.publicKey;
     console.log(authority)
-    const nftId = new anchor.BN(0)
+    const nftId = new anchor.BN(3)
     const tx = await candyNftFactory.methods
       .mintNft(nftId)
       .accounts({
@@ -41,6 +41,17 @@ async function main() {
       .rpc()
   console.log("Transaction signature", tx);
 
+    /*
+  const connection = new Connection('https://solana-devnet.g.alchemy.com/v2/cJkK2SdqwYHK-8eElur2mNY1zbuN5do4', 'confirmed');
+
+  const accountInfo = await connection.getAccountInfo(phasePda,'confirmed')
+  console.log("accountInfo",Buffer.from(accountInfo.data))
+
+  console.log("accountInfo",accountInfo.data.toString('utf8'))
+
+  const a = await candyNftFactory.account.phase.fetch(phasePda)
+  console.log("a",a)
+  */
 }
 
 // 运行主函数

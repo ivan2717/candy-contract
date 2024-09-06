@@ -5,9 +5,10 @@ use anchor_spl::metadata::{
     CreateMetadataAccountsV3, Metadata,
 };
 use anchor_spl::token::{mint_to, Mint, MintTo, Token, TokenAccount};
-use mpl_token_metadata::types::DataV2;
+use mpl_token_metadata::types::{DataV2,Collection};
 
-declare_id!("HDo1KynYNxqtfjpqsotYMvgx2M2yF1FFxTeaiwp4cGdQ");
+
+declare_id!("9UaULu8Zx4wEMq7RS8chMjWVxHKd8fuH6peufJL9xWBN");
 
 #[program]
 pub mod candy_nft_factory {
@@ -32,6 +33,7 @@ pub mod candy_nft_factory {
 
     pub fn mint_nft(
         ctx:Context<MintNFT>,
+        phase_id:u64,
         nft_id: u64,
     ) -> Result<()>{
         
@@ -40,7 +42,11 @@ pub mod candy_nft_factory {
             return Err(CandyError::MaxSupplyLimit.into());
         }
 
-        msg!("Nft id: current_nft_id=>{} nft_id=>{}",ctx.accounts.phase.current_nft_id,nft_id);
+        if phase_id != ctx.accounts.phase.phase_id {
+            msg!("Phase id Mismatch: {}",ctx.accounts.phase.phase_id);
+            return Err(CandyError::PhaseIdMismatch.into());
+        }
+
  
         if nft_id != ctx.accounts.phase.current_nft_id {
             msg!("Nft id Mismatch: {}",ctx.accounts.phase.current_nft_id);
@@ -49,11 +55,12 @@ pub mod candy_nft_factory {
         let id_bytes = ctx.accounts.phase.current_nft_id.to_be_bytes();
         ctx.accounts.phase.current_nft_id = nft_id + 1;
 
-        msg!("Nft id: current_nft_id=>{}",ctx.accounts.phase.current_nft_id);
-
         let phase_id_bytes = ctx.accounts.phase.phase_id.to_be_bytes();
 
+        msg!("===========1");
+
         let (_pda,bump) = Pubkey::find_program_address(&["mint".as_bytes(),id_bytes.as_ref(),phase_id_bytes.as_ref()], ctx.program_id);
+        msg!("===========2");
 
         let seeds = &["mint".as_bytes(),id_bytes.as_ref(),phase_id_bytes.as_ref(),&[bump]];
 
@@ -67,7 +74,9 @@ pub mod candy_nft_factory {
             }, 
             &seeds_binding
         );
+        msg!("===========3");
         mint_to(cpi_context, 1)?;
+        msg!("===========4");
 
         let cpi_context = CpiContext::new_with_signer(
             ctx.accounts.metadata_program.to_account_info(),
@@ -83,17 +92,24 @@ pub mod candy_nft_factory {
             &seeds_binding,
         );
 
+        msg!("===========5");
+        let (collection_pda,_bump) = Pubkey::find_program_address(&["collection".as_bytes(),phase_id_bytes.as_ref()], ctx.program_id);
+        msg!("===========6");
+
         let data_v2 = DataV2 { 
             name:ctx.accounts.phase.name.clone(), 
             symbol:ctx.accounts.phase.symbol.clone(), 
             uri:ctx.accounts.phase.base_uri.clone() + &nft_id.to_string() +".png", 
             seller_fee_basis_points: 0,
             creators: None,
-            collection: None,
+            collection: Some(Collection { verified: false, key: collection_pda }),
             uses: None
          };
+         msg!("===========7");
 
          create_metadata_accounts_v3(cpi_context,data_v2,true,true,None)?;
+         
+         msg!("===========8");
 
          let cpi_context = CpiContext::new_with_signer(
             ctx.accounts.metadata_program.to_account_info(),
@@ -154,7 +170,7 @@ pub struct InitPhase<'info> {
 }
 
 #[derive(Accounts)]
-#[instruction(nft_id: u64)]
+#[instruction(phase_id:u64,nft_id: u64)]
 pub struct MintNFT<'info>{
 
     #[account(mut)]
@@ -169,7 +185,7 @@ pub struct MintNFT<'info>{
         mint::decimals = 0,
         mint::authority = authority,
         mint::freeze_authority = authority,
-        seeds = ["mint".as_bytes(), nft_id.to_le_bytes().as_ref()], 
+        seeds = ["mint".as_bytes(),phase_id.to_le_bytes().as_ref(), nft_id.to_le_bytes().as_ref()], 
         // seeds = ["mint".as_bytes()], 
         bump,
         )]
@@ -227,6 +243,8 @@ pub enum CandyError {
     MaxSupplyLimit,
     #[msg("Nft id Mismatch")]
     NftIdMismatch,
+    #[msg("Phase id Mismatch")]
+    PhaseIdMismatch,
 }
 
 

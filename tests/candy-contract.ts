@@ -12,37 +12,37 @@ describe("candy-contract", () => {
   anchor.setProvider(provider);
 
 
-  it("Is initialized!", async () => {
+  // it("Is initialized!", async () => {
 
-    const candyNftFactory = anchor.workspace.CandyNftFactory as Program<CandyNftFactory>
-    console.log("======",candyNftFactory.programId)
+  //   const candyNftFactory = anchor.workspace.CandyNftFactory as Program<CandyNftFactory>
+  //   console.log("======",candyNftFactory.programId)
 
-    const phaseId = new anchor.BN(0); 
+  //   const phaseId = new anchor.BN(0); 
 
-    const [phasePda, bump] = PublicKey.findProgramAddressSync(
-      [Buffer.from("phase")], // seeds
-      candyNftFactory.programId
-    );
+  //   const [phasePda, bump] = PublicKey.findProgramAddressSync(
+  //     [Buffer.from("phase")], // seeds
+  //     candyNftFactory.programId
+  //   );
 
-    console.log("phasePda======",phasePda)
+  //   console.log("phasePda======",phasePda)
 
-    const name = "My NFT Collection"; // String 参数
-    const symbol = "MNFT";            // String 参数
-    const baseUri = "https://example.com/metadata/"; // String 参数
-    const maxSupply = new anchor.BN(1000);     
-    const authority = provider.wallet.publicKey;
-    const tx = await candyNftFactory.methods
-      .initPhase(name,symbol,baseUri,maxSupply)
-      .accounts({
-        // phase: phasePda,
-        authority: authority,
-        // systemProgram: SystemProgram.programId,
-      })
-      .signers([])
-      .rpc()
+  //   const name = "My NFT Collection"; // String 参数
+  //   const symbol = "MNFT";            // String 参数
+  //   const baseUri = "https://example.com/metadata/"; // String 参数
+  //   const maxSupply = new anchor.BN(1000);     
+  //   const authority = provider.wallet.publicKey;
+  //   const tx = await candyNftFactory.methods
+  //     .initPhase(name,symbol,baseUri,maxSupply)
+  //     .accounts({
+  //       // phase: phasePda,
+  //       authority: authority,
+  //       // systemProgram: SystemProgram.programId,
+  //     })
+  //     .signers([])
+  //     .rpc()
 
-      console.log("Transaction signature:", tx);
-  });
+  //     console.log("Transaction signature:", tx);
+  // });
 
   it("Mint NFT", async () => {
 
@@ -57,11 +57,18 @@ describe("candy-contract", () => {
     );
     console.log("phasePda======",phasePda)
 
+    const [collectionPda, bump1] = PublicKey.findProgramAddressSync(
+      [Buffer.from("collection"),numberToBuffer(1)], // seeds
+      candyNftFactory.programId
+    );
+    console.log("collectionPda======",collectionPda)
+
 
     const authority = provider.wallet.publicKey;
-    const nftId = new anchor.BN(0)
+    const phaseId = new anchor.BN(1)
+    const nftId = new anchor.BN(1)
     const tx = await candyNftFactory.methods
-      .mintNft(nftId)
+      .mintNft(phaseId,nftId)
       .accounts({
         authority: authority,
         payer: authority,
@@ -87,6 +94,15 @@ describe("candy-contract", () => {
 
   });
 });
+
+
+function numberToBuffer(num: number): Buffer {
+  const phaseIdBytes = Buffer.alloc(8); // 64-bit, 8 bytes
+  phaseIdBytes.writeBigUInt64BE(BigInt(num)); 
+  return phaseIdBytes
+}
+
+
 
 
 

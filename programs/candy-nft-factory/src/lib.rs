@@ -47,7 +47,6 @@ pub mod candy_nft_factory {
             return Err(CandyError::PhaseIdMismatch.into());
         }
 
- 
         if nft_id != ctx.accounts.phase.current_nft_id {
             msg!("Nft id Mismatch: {}",ctx.accounts.phase.current_nft_id);
             return Err(CandyError::NftIdMismatch.into());

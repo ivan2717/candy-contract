@@ -129,6 +129,10 @@ pub mod candy_nft_factory {
 
         create_master_edition_v3(cpi_context,Some(0))?;
 
+        msg!("Minting NFT with details:");
+        msg!("Payer: {}", ctx.accounts.payer.key());
+        msg!("Token ID: {}", nft_id);
+
         Ok(())
     }
 

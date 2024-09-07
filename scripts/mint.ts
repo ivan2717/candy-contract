@@ -29,7 +29,7 @@ async function main() {
 
     const authority = provider.wallet.publicKey;
     console.log(authority)
-    const nftId = new anchor.BN(3)
+    const nftId = new anchor.BN(10)
     const tx = await candyNftFactory.methods
       .mintNft(nftId)
       .accounts({

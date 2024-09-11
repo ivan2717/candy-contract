@@ -13,7 +13,7 @@ use anchor_lang::solana_program::system_instruction;
 use anchor_lang::solana_program::program::invoke;
 
 
-declare_id!("C3fqJCRtQugSM3USQuRRp5TrbDJ8nUVVQSG5t18MQcDS");
+declare_id!("4aYeWJm8F7WUorv6k7pmsmxEGWJH3oAe9q8vYTd6kNJz");
 
 
 #[program]
@@ -42,7 +42,7 @@ pub mod candy_nft_factory {
 
     pub fn mint_nft(
         ctx:Context<MintNFT>,
-        to:Pubkey,
+        // to:Pubkey,
         lamports:u64,
         expire_at:i64,
         signature:[u8;64]
@@ -51,15 +51,17 @@ pub mod candy_nft_factory {
         let ix = load_instruction_at_checked(0, &ctx.accounts.ix_sysvar)?;
 
         let mut message = Vec::new();
-        message.extend_from_slice(&to.to_bytes());
-        // message.extend_from_slice(&ctx.accounts.payer.key.to_bytes());
+        // message.extend_from_slice(&to.to_bytes());
+        message.extend_from_slice(&ctx.accounts.payer.key.to_bytes());
         message.extend_from_slice(&lamports.to_le_bytes());
         message.extend_from_slice(&expire_at.to_le_bytes());
+        msg!("lamports: {}",lamports);
 
+        msg!("message: {:?}",message);
         verify_ed25519_ix(&ix, &ctx.accounts.phase.signer.to_bytes(), &message, &signature)?;
 
-        // msg!("verify success");
-        // msg!("contract_vault:{}",ctx.accounts.contract_vault.key);
+        msg!("verify success");
+        msg!("contract_vault:{}",ctx.accounts.contract_vault.key);
         
         if ctx.accounts.phase.current_nft_id >= ctx.accounts.phase.max_supply {
             msg!("Maximum supply limit reached!");
@@ -74,12 +76,12 @@ pub mod candy_nft_factory {
             return Err(CandyError::SignatureExpired.into());
         }
 
-        // let transfer_ix = system_instruction::transfer(&ctx.accounts.payer.key, ctx.program_id, lamports);
-        // invoke(&transfer_ix, &[
-        //     ctx.accounts.payer.to_account_info(),
-        //     ctx.accounts.contract_vault.to_account_info(),
-        //     ctx.accounts.system_program.to_account_info()
-        // ])?;
+        let transfer_ix = system_instruction::transfer(ctx.accounts.payer.key,  ctx.accounts.contract_vault.key, lamports);
+        invoke(&transfer_ix, &[
+            ctx.accounts.payer.to_account_info(),
+            ctx.accounts.contract_vault.to_account_info(),
+            ctx.accounts.system_program.to_account_info()
+        ])?;
 
         let nft_id = ctx.accounts.phase.current_nft_id;
         let id_bytes = ctx.accounts.phase.current_nft_id.to_be_bytes();
@@ -337,17 +339,15 @@ pub struct MintNFT<'info>{
     #[account(address = IX_ID)]
     pub ix_sysvar: AccountInfo<'info>, 
 
-    // /// CHECK:
-    // #[account(
-    //     init,
-    //     payer = payer,
-    //     space = 32,
-    //     seeds = [
-    //         b"vault".as_ref()
-    //     ],
-    //     bump,
-    // )]
-    // pub contract_vault: UncheckedAccount<'info>
+    /// CHECK:
+    #[account(
+        mut,
+        seeds = [
+            b"vault".as_ref()
+        ],
+        bump,
+    )]
+    pub contract_vault: UncheckedAccount<'info>
 }
 
 

@@ -9,7 +9,7 @@ import 'dotenv/config'
 
   // const provider = anchor.AnchorProvider.local();
 
-  console.log("======",  process.env.ANCHOR_PROVIDER_URL)
+  console.log("rpc======",  process.env.ANCHOR_PROVIDER_URL)
   const provider = anchor.AnchorProvider.env()
   anchor.setProvider(provider);
 
@@ -181,9 +181,10 @@ const mintNFT = async () => {
   const authority = provider.wallet.publicKey;
   const phaseId = new anchor.BN(1)
   const nftId = new anchor.BN(1)
-  const lamports = new anchor.BN(1000000,"le")
-const time =Math.floor(Date.now()/1000) + 60 * 5 // 过期时间5分钟
-  const expireAt = new anchor.BN(time,"le")
+  const lamports = new anchor.BN(1000000)
+  const time =Math.floor(Date.now()/1000) + 60 * 5 // 过期时间5分钟
+  console.log("expireAt: ",time)
+  const expireAt = new anchor.BN(time)
   // const expireAt = Math.floor(Date.now()/1000) + 60 * 60
   const msg = Uint8Array.from([...provider.wallet.publicKey.toBuffer(),...lamports.toBuffer("le",8),...expireAt.toBuffer("le",8)])
   console.log("=====msg====",msg)
@@ -215,7 +216,7 @@ const time =Math.floor(Date.now()/1000) + 60 * 5 // 过期时间5分钟
       // Our instruction
       await candyNftFactory.methods
     // .mintNft(phaseId,nftId)
-    .mintNft(provider.wallet.publicKey,lamports,expireAt,Array.from(signature))
+    .mintNft(lamports,expireAt,Array.from(signature))
     // .mintNft(expireAt,Buffer.from(msg),Array.from(signature))
     // .mintNft(provider.wallet.publicKey,lamports,expireAt,Buffer.from(msg),Array.from(signature))
     .accounts({
@@ -239,8 +240,8 @@ const time =Math.floor(Date.now()/1000) + 60 * 5 // 过期时间5分钟
   console.log("hash=====>",hash)
 }
 
-init()
-// mintNFT()
+// init()
+mintNFT()
 
 
 function numberToBuffer(num: number): Buffer {

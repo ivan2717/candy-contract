@@ -15,7 +15,7 @@ use anchor_lang::solana_program::system_instruction;
 use anchor_lang::solana_program::program::invoke;
 
 
-declare_id!("4aYeWJm8F7WUorv6k7pmsmxEGWJH3oAe9q8vYTd6kNJz");
+declare_id!("4pHXxijcciZxzjgZaJ4TwZTjpjqiqgen2mWWkJdxY9Km");
 
 #[program]
 pub mod candy_nft_factory {
@@ -77,6 +77,8 @@ pub mod candy_nft_factory {
             msg!("signature expired");
             return Err(CandyError::SignatureExpired.into());
         }
+
+        msg!("contract_vault: {} ",ctx.accounts.contract_vault.key());
 
         let transfer_ix = system_instruction::transfer(ctx.accounts.payer.key,  ctx.accounts.contract_vault.key, lamports);
         invoke(&transfer_ix, &[
@@ -176,6 +178,7 @@ pub mod candy_nft_factory {
         let signer = get_signer()?;
         verify_ed25519_ix(&ix, signer.as_ref(), &message, &signature)?;
 
+        msg!("verify signature success");
         if ctx.accounts.claim_record.is_claimed {
             return Err(CandyError::DuplicatedClaimError.into());
         }
@@ -185,15 +188,21 @@ pub mod candy_nft_factory {
         }
 
         // let seeds = &[b"vault".as_ref()];
-        // let (contract_vault,_bump) = Pubkey::find_program_address(&seeds[..], ctx.program_id);
+        let (contract_vault,bump) = Pubkey::find_program_address(&[b"vault"], ctx.program_id);
 
-    
+        msg!("bump1: {} bump2{}",bump,ctx.bumps.contract_vault);
+        msg!("mint: {} token_account: {}",ctx.accounts.mint.key(),ctx.accounts.token_account.key());
+        msg!("contract_vault1: {} contract_vault2: {} ",contract_vault, ctx.accounts.contract_vault.key());
+        msg!("reward: {}",rewards);
         let transfer_instruction = system_instruction::transfer(
-            ctx.accounts.contract_vault.key,
-            ctx.accounts.payer.key,
+            &ctx.accounts.contract_vault.key(),
+            &ctx.accounts.payer.key(),
             rewards,
         );
 
+        // let seeds = &[&[b"vault"],&[bump]];
+        let seeds = &["vault".as_bytes(),&[bump]];
+        let seeds_binding = [&seeds[..]];
         invoke_signed(
             &transfer_instruction, 
             &[
@@ -201,7 +210,7 @@ pub mod candy_nft_factory {
                 ctx.accounts.payer.to_account_info(),
                 ctx.accounts.system_program.to_account_info()
             ], 
-            &[&[b"vault".as_ref()]]
+            &seeds_binding
         )?;
         
         ctx.accounts.claim_record.is_claimed = true;
@@ -440,14 +449,16 @@ pub struct Claim<'info> {
     #[account(address = IX_ID)]
     pub ix_sysvar: AccountInfo<'info>, 
 
-    pub mint: Account<'info, Mint>, 
+    
+    #[account(mut)]
+    pub mint: Account<'info,Mint>, 
 
     #[account(
         constraint = token_account.mint == mint.key() // Check that the Token Account's mint matches the passed mint
     )]
     pub token_account: Account<'info, TokenAccount>,
 
-    /// CHECK
+    /// CHECK:
     #[account(
         mut,
         seeds = [
@@ -455,7 +466,7 @@ pub struct Claim<'info> {
         ],
         bump,
     )]
-    pub contract_vault: AccountInfo<'info>
+    pub contract_vault: UncheckedAccount<'info>
 }
 
 

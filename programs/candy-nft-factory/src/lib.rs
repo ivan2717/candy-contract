@@ -1,3 +1,5 @@
+use std::str::FromStr;
+
 use anchor_lang::prelude::*;
 use anchor_lang::solana_program::instruction::Instruction;
 use anchor_lang::solana_program::sysvar::instructions::{ID as IX_ID,load_instruction_at_checked};
@@ -15,11 +17,12 @@ use anchor_lang::solana_program::program::invoke;
 
 declare_id!("4aYeWJm8F7WUorv6k7pmsmxEGWJH3oAe9q8vYTd6kNJz");
 
-
 #[program]
 pub mod candy_nft_factory {
 
 
+
+    use anchor_lang::solana_program::program::invoke_signed;
 
     use super::*;
 
@@ -42,7 +45,6 @@ pub mod candy_nft_factory {
 
     pub fn mint_nft(
         ctx:Context<MintNFT>,
-        // to:Pubkey,
         lamports:u64,
         expire_at:i64,
         signature:[u8;64]
@@ -51,14 +53,14 @@ pub mod candy_nft_factory {
         let ix = load_instruction_at_checked(0, &ctx.accounts.ix_sysvar)?;
 
         let mut message = Vec::new();
-        // message.extend_from_slice(&to.to_bytes());
         message.extend_from_slice(&ctx.accounts.payer.key.to_bytes());
         message.extend_from_slice(&lamports.to_le_bytes());
         message.extend_from_slice(&expire_at.to_le_bytes());
         msg!("lamports: {}",lamports);
 
         msg!("message: {:?}",message);
-        verify_ed25519_ix(&ix, &ctx.accounts.phase.signer.to_bytes(), &message, &signature)?;
+        let signer = get_signer()?;
+        verify_ed25519_ix(&ix, signer.as_ref(), &message, &signature)?;
 
         msg!("verify success");
         msg!("contract_vault:{}",ctx.accounts.contract_vault.key);
@@ -158,6 +160,55 @@ pub mod candy_nft_factory {
     }
 
 
+    pub fn claim(
+        ctx:Context<Claim>,
+        rewards:u64,
+        signature:[u8;64]
+    )->Result<()>{
+
+        let ix = load_instruction_at_checked(0, &ctx.accounts.ix_sysvar)?;
+
+        let mut message = Vec::new();
+        message.extend_from_slice(&ctx.accounts.payer.key.to_bytes());
+        message.extend_from_slice(&ctx.accounts.mint.key().to_bytes());
+        message.extend_from_slice(&rewards.to_le_bytes());
+
+        let signer = get_signer()?;
+        verify_ed25519_ix(&ix, signer.as_ref(), &message, &signature)?;
+
+        if ctx.accounts.claim_record.is_claimed {
+            return Err(CandyError::DuplicatedClaimError.into());
+        }
+
+        if ctx.accounts.token_account.owner != ctx.accounts.payer.key() {
+            return  Err(CandyError::InvalidOwnerError.into());
+        }
+
+        // let seeds = &[b"vault".as_ref()];
+        // let (contract_vault,_bump) = Pubkey::find_program_address(&seeds[..], ctx.program_id);
+
+    
+        let transfer_instruction = system_instruction::transfer(
+            ctx.accounts.contract_vault.key,
+            ctx.accounts.payer.key,
+            rewards,
+        );
+
+        invoke_signed(
+            &transfer_instruction, 
+            &[
+                ctx.accounts.contract_vault.to_account_info(),
+                ctx.accounts.payer.to_account_info(),
+                ctx.accounts.system_program.to_account_info()
+            ], 
+            &[&[b"vault".as_ref()]]
+        )?;
+        
+        ctx.accounts.claim_record.is_claimed = true;
+        Ok(())
+    }
+
+
 }
 
 fn verify_ed25519_ix(ix: &Instruction, pubkey: &[u8], msg: &[u8], sig: &[u8]) -> Result<()> {
@@ -175,6 +226,16 @@ fn verify_ed25519_ix(ix: &Instruction, pubkey: &[u8], msg: &[u8], sig: &[u8]) ->
     check_ed25519_data(&ix.data, pubkey, msg, sig)?;            // If that's not the case, check data
 
     Ok(())
+}
+
+fn get_signer()->Result<Pubkey> {
+    let pubkey_str = "BBgai5MfC5s6z944bXTxFK9FpzR5uLkLBpFBhBgPB6LT"; 
+    let pubkey = Pubkey::from_str(pubkey_str);
+    match pubkey {
+        Ok(pubkey) => Ok(pubkey),
+        Err(_) => Err(CandyError::ParsePubkeyError.into()),
+    }
+    
 }
 
 pub fn check_ed25519_data(data: &[u8], pubkey: &[u8], msg: &[u8], sig: &[u8]) -> Result<()> {
@@ -246,6 +307,12 @@ pub struct Phase {
     #[max_len(10)]
     pub symbol: String,
     pub signer:Pubkey,
+}
+
+#[account]
+#[derive(InitSpace)]
+pub struct ClaimRecord {
+    is_claimed:bool,
 }
 
 
@@ -350,6 +417,48 @@ pub struct MintNFT<'info>{
     pub contract_vault: UncheckedAccount<'info>
 }
 
+#[derive(Accounts)]
+pub struct Claim<'info> {
+    #[account(mut)]
+    pub payer: Signer<'info>,
+
+    #[account(
+        init,
+        payer = payer,
+        space = 8 + ClaimRecord::INIT_SPACE,
+        seeds = [&mint.key().to_bytes()],
+        bump,
+    )]
+    pub claim_record:Account<'info,ClaimRecord>,
+
+    pub system_program: Program<'info, System>,
+
+    /// CHECK: The address check is needed because otherwise
+    /// the supplied Sysvar could be anything else.
+    /// The Instruction Sysvar has not been implemented
+    /// in the Anchor framework yet, so this is the safe approach.
+    #[account(address = IX_ID)]
+    pub ix_sysvar: AccountInfo<'info>, 
+
+    pub mint: Account<'info, Mint>, 
+
+    #[account(
+        constraint = token_account.mint == mint.key() // Check that the Token Account's mint matches the passed mint
+    )]
+    pub token_account: Account<'info, TokenAccount>,
+
+    /// CHECK
+    #[account(
+        mut,
+        seeds = [
+            b"vault".as_ref()
+        ],
+        bump,
+    )]
+    pub contract_vault: AccountInfo<'info>
+}
+
+
 
 #[error_code]
 pub enum CandyError {
@@ -359,12 +468,16 @@ pub enum CandyError {
     NftIdMismatch,
     #[msg("Phase id Mismatch")]
     PhaseIdMismatch,
-    #[msg("signature expired")]
+    #[msg("Signature expired")]
     SignatureExpired,
     #[msg("Invalid signature")]
-    InvalidSignature,
-    #[msg("Invalid signature")]
     SigVerificationFailed,
+    #[msg("Invalid pubkey str")]
+    ParsePubkeyError,
+    #[msg("You have already claimed")]
+    DuplicatedClaimError,
+    #[msg("Invalid owner")]
+    InvalidOwnerError
 }
 
 

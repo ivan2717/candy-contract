@@ -1,12 +1,25 @@
+import * as ed from "@noble/ed25519";
 import * as anchor from '@coral-xyz/anchor';
 import { Program } from "@coral-xyz/anchor";
-import { PublicKey, SystemProgram } from "@solana/web3.js";
+import { Keypair, PublicKey, SystemProgram } from "@solana/web3.js";
 import { assert } from "chai";
+// const ed  = require("@noble/ed25519")
 import { CandyNftFactory } from "../target/types/candy_nft_factory"; // Ensure the path is correct for your project
+import 'dotenv/config'
 
-describe("candy_nft_factory", () => {
-  const provider = anchor.AnchorProvider.local();
+  // const provider = anchor.AnchorProvider.local();
+
+  console.log("======",  process.env.ANCHOR_PROVIDER_URL)
+  const provider = anchor.AnchorProvider.env()
   anchor.setProvider(provider);
+
+
+// describe("candy_nft_factory", () => {
+//   // const provider = anchor.AnchorProvider.local();
+
+//   console.log("======",  process.env.ANCHOR_PROVIDER_URL)
+//   const provider = anchor.AnchorProvider.env()
+//   anchor.setProvider(provider);
 
 
   // it("Is initialized!", async () => {
@@ -41,50 +54,193 @@ describe("candy_nft_factory", () => {
   //     console.log("Transaction signature:", tx);
   // });
 
-  it("Mint NFT", async () => {
-    const nftId = new anchor.BN(0);
-    const tokenAccount = await anchor.utils.token.associatedAddress({
-      mint: mint.publicKey,
-      owner: provider.wallet.publicKey,
-    });
+  // it("Mint NFT", async () => {
 
-    const candyNftFactory = anchor.workspace.CandyNftFactory as Program<CandyNftFactory>
-    console.log("programId======",candyNftFactory.programId)
 
-    // const phaseId = new anchor.BN(0); 
+
+  //   const candyNftFactory = anchor.workspace.CandyNftFactory as Program<CandyNftFactory>
+  //   console.log("programId======",candyNftFactory.programId)
+
+  //   // const phaseId = new anchor.BN(0); 
  
-    const [phasePda, bump] = PublicKey.findProgramAddressSync(
-      [Buffer.from("phase")], // seeds
-      candyNftFactory.programId
-    );
-    console.log("phasePda======",phasePda)
+  //   const [phasePda, bump] = PublicKey.findProgramAddressSync(
+  //     [Buffer.from("phase")], // seeds
+  //     candyNftFactory.programId
+  //   );
+  //   console.log("phasePda======",phasePda)
 
-    const [collectionPda, bump1] = PublicKey.findProgramAddressSync(
-      [Buffer.from("collection"),numberToBuffer(1)], // seeds
-      candyNftFactory.programId
-    );
-    console.log("collectionPda======",collectionPda)
+  //   const [collectionPda, bump1] = PublicKey.findProgramAddressSync(
+  //     [Buffer.from("collection"),numberToBuffer(1)], // seeds
+  //     candyNftFactory.programId
+  //   );
+  //   console.log("collectionPda======",collectionPda)
 
 
-    const authority = provider.wallet.publicKey;
-    const phaseId = new anchor.BN(1)
-    const nftId = new anchor.BN(1)
-    const tx = await candyNftFactory.methods
-      .mintNft(phaseId,nftId)
-      .accounts({
-        authority: provider.wallet.publicKey,
-        payer: provider.wallet.publicKey,
-        metadataProgram: TOKEN_METADATA_PROGRAM_ID,
-        phase: phasePda,
+  //   const authority = provider.wallet.publicKey;
+  //   const phaseId = new anchor.BN(1)
+  //   const nftId = new anchor.BN(1)
+  //   const lamports = new anchor.BN(1000000)
+  //   const expireAt = new anchor.BN(Math.floor(Date.now()/1000) + 60 * 60)
+  //   // const expireAt = Math.floor(Date.now()/1000) + 60 * 60
+  //   const msg = Uint8Array.from([...provider.wallet.publicKey.toBuffer(),...lamports.toBuffer(),...expireAt.toBuffer()])
+  //   const secretKey = Uint8Array.from([100,205,108,196,120,101,128,100,161,22,234,238,168,3,158,161,161,186,131,135,185,33,43,90,27,122,101,130,16,182,12,129,151,81,110,147,30,22,255,161,199,207,128,60,115,4,106,222,159,118,12,159,73,249,129,57,214,143,115,219,210,118,170,236])
+  //   const keyPair = Keypair.fromSecretKey(secretKey)
+  //   const signature = await ed.signAsync(msg,keyPair.secretKey.slice(0,32))
+  
+  //   // const tx = await candyNftFactory.methods
+  //   //   // .mintNft(phaseId,nftId)
+  //   //   .mintNft(provider.wallet.publicKey,lamports,expireAt,Array.from(signature))
+  //   //   .accounts({
+  //   //     authority: provider.wallet.publicKey,
+  //   //     payer: provider.wallet.publicKey,
+  //   //     // metadataProgram: TOKEN_METADATA_PROGRAM_ID,
+  //   //     phase: phasePda,
+  //   //   })
+  //   //   .signers([])
+  //   //   .rpc();
+  //   let tx = new anchor.web3.Transaction()
+  //   .add(
+  //       // Ed25519 instruction
+  //       anchor.web3.Ed25519Program.createInstructionWithPublicKey({
+  //           publicKey: provider.wallet.publicKey.toBuffer(),
+  //           message: msg,
+  //           signature: signature,
+  //       })
+  //   )
+  //   .add(
+  //       // Our instruction
+  //       await candyNftFactory.methods
+  //     // .mintNft(phaseId,nftId)
+  //     .mintNft(provider.wallet.publicKey,lamports,expireAt,Array.from(signature))
+  //     .accounts({
+  //       authority: provider.wallet.publicKey,
+  //       payer: provider.wallet.publicKey,
+  //       // metadataProgram: TOKEN_METADATA_PROGRAM_ID,
+  //       phase: phasePda,
+  //     })
+  //     .signers([])
+  //     .instruction()
+  //   );
+
+  // });
+// });
+
+const init = async () => {
+
+  const candyNftFactory = anchor.workspace.CandyNftFactory as Program<CandyNftFactory>
+  console.log("======",candyNftFactory.programId)
+
+  const phaseId = new anchor.BN(0); 
+
+  const [phasePda, bump] = PublicKey.findProgramAddressSync(
+    [Buffer.from("phase")], // seeds
+    candyNftFactory.programId
+  );
+
+  console.log("phasePda======",phasePda)
+
+  const name = "My NFT Collection"; // String 参数
+  const symbol = "MNFT";            // String 参数
+  const baseUri = "https://example.com/metadata/"; // String 参数
+  const maxSupply = new anchor.BN(1000);     
+  const authority = provider.wallet.publicKey;
+  const tx = await candyNftFactory.methods
+    .initPhase(name,symbol,baseUri,maxSupply)
+    .accounts({
+      // phase: phasePda,
+      authority: authority,
+      // systemProgram: SystemProgram.programId,
+    })
+    .signers([])
+    .rpc()
+
+    console.log("Transaction signature:", tx);
+}
+
+const mintNFT = async () => {
+
+
+  const candyNftFactory = anchor.workspace.CandyNftFactory as Program<CandyNftFactory>
+  console.log("programId======",candyNftFactory.programId)
+
+  // const phaseId = new anchor.BN(0); 
+
+  const [phasePda, bump] = PublicKey.findProgramAddressSync(
+    [Buffer.from("phase")], // seeds
+    candyNftFactory.programId
+  );
+  console.log("phasePda======",phasePda)
+
+  const [collectionPda, bump1] = PublicKey.findProgramAddressSync(
+    [Buffer.from("collection"),numberToBuffer(1)], // seeds
+    candyNftFactory.programId
+  );
+  console.log("collectionPda======",collectionPda)
+
+
+  const authority = provider.wallet.publicKey;
+  const phaseId = new anchor.BN(1)
+  const nftId = new anchor.BN(1)
+  const lamports = new anchor.BN(1000000,"le")
+const time =Math.floor(Date.now()/1000) + 60 * 5 // 过期时间5分钟
+  const expireAt = new anchor.BN(time,"le")
+  // const expireAt = Math.floor(Date.now()/1000) + 60 * 60
+  const msg = Uint8Array.from([...provider.wallet.publicKey.toBuffer(),...lamports.toBuffer("le",8),...expireAt.toBuffer("le",8)])
+  console.log("=====msg====",msg)
+  const secretKey = Uint8Array.from([100,205,108,196,120,101,128,100,161,22,234,238,168,3,158,161,161,186,131,135,185,33,43,90,27,122,101,130,16,182,12,129,151,81,110,147,30,22,255,161,199,207,128,60,115,4,106,222,159,118,12,159,73,249,129,57,214,143,115,219,210,118,170,236])
+  const keyPair = Keypair.fromSecretKey(secretKey)
+  const signature = await ed.sign(msg,keyPair.secretKey.slice(0,32))
+
+  // const tx = await candyNftFactory.methods
+  //   // .mintNft(phaseId,nftId)
+  //   .mintNft(provider.wallet.publicKey,lamports,expireAt,Array.from(signature))
+  //   .accounts({
+  //     authority: provider.wallet.publicKey,
+  //     payer: provider.wallet.publicKey,
+  //     // metadataProgram: TOKEN_METADATA_PROGRAM_ID,
+  //     phase: phasePda,
+  //   })
+  //   .signers([])
+  //   .rpc();
+  let tx = new anchor.web3.Transaction()
+  .add(
+      // Ed25519 instruction
+      anchor.web3.Ed25519Program.createInstructionWithPublicKey({
+          publicKey: provider.wallet.publicKey.toBuffer(),
+          message: msg,
+          signature: signature,
       })
-      .signers([])
-      .rpc();
+  )
+  .add(
+      // Our instruction
+      await candyNftFactory.methods
+    // .mintNft(phaseId,nftId)
+    .mintNft(provider.wallet.publicKey,lamports,expireAt,Array.from(signature))
+    // .mintNft(expireAt,Buffer.from(msg),Array.from(signature))
+    // .mintNft(provider.wallet.publicKey,lamports,expireAt,Buffer.from(msg),Array.from(signature))
+    .accounts({
+      authority: provider.wallet.publicKey,
+      payer: provider.wallet.publicKey,
+      // metadataProgram: TOKEN_METADATA_PROGRAM_ID,
+      phase: phasePda,
+    })
+    .signers([])
+    .instruction()
+  );
+  const { lastValidBlockHeight, blockhash } =
+  await provider.connection.getLatestBlockhash();
+  tx.lastValidBlockHeight = lastValidBlockHeight;
+  tx.recentBlockhash = blockhash;
+  tx.feePayer = provider.wallet.publicKey;
+  tx.sign(keyPair)
 
-    // Validate the NFT mint by fetching the mint account
-    const mintAccount = await program.provider.connection.getParsedAccountInfo(mint.publicKey);
-    assert.ok(mintAccount.value !== null);
-  });
-});
+  const hash = await provider.connection.sendRawTransaction(tx.serialize())
+  
+  console.log("hash=====>",hash)
+}
+
+init()
+// mintNFT()
 
 
 function numberToBuffer(num: number): Buffer {

@@ -208,9 +208,9 @@ const claim= async () => {
 
 
 
-// init()
+init()
 // mintNFT()
-claim()
+// claim()
 
 
 function numberToBuffer(num: number): Buffer {

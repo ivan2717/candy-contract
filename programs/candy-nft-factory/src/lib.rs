@@ -13,16 +13,13 @@ use mpl_token_metadata::types::{DataV2,Collection};
 use anchor_lang::solana_program::ed25519_program::ID as ED25519_ID;
 use anchor_lang::solana_program::system_instruction;
 use anchor_lang::solana_program::program::invoke;
+use anchor_lang::solana_program::program::invoke_signed;
 
 
-declare_id!("4pHXxijcciZxzjgZaJ4TwZTjpjqiqgen2mWWkJdxY9Km");
+declare_id!("2mEqNyUZcsKmEtkPyBE1bsGtQ3vDJNVn1WpqhC6dAEoE");
 
 #[program]
 pub mod candy_nft_factory {
-
-
-
-    use anchor_lang::solana_program::program::invoke_signed;
 
     use super::*;
 
@@ -328,7 +325,7 @@ pub struct ClaimRecord {
 #[derive(Accounts)]
 pub struct InitPhase<'info> {
     #[account(
-        init,
+        init_if_needed,
         payer = authority,
         space = 8 + Phase::INIT_SPACE,
         seeds = ["phase".as_bytes()],

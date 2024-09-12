@@ -16,7 +16,7 @@ use anchor_lang::solana_program::program::invoke;
 use anchor_lang::solana_program::program::invoke_signed;
 
 
-declare_id!("2mEqNyUZcsKmEtkPyBE1bsGtQ3vDJNVn1WpqhC6dAEoE");
+declare_id!("F5m1mLL7q24FgWZQDw2egmyiSFh8TvHLx5VtYUbG1mKE");
 
 #[program]
 pub mod candy_nft_factory {
@@ -30,6 +30,10 @@ pub mod candy_nft_factory {
         base_uri:String,
         max_supply:u64,
     ) -> Result<()>{
+        let owner = get_owner()?;
+        if ctx.accounts.authority.key() != owner {
+            return Err(CandyError::OnlyOwner.into());
+        }
         ctx.accounts.phase.phase_id += 1;
         ctx.accounts.phase.max_supply = max_supply;
         ctx.accounts.phase.name = name;
@@ -56,11 +60,12 @@ pub mod candy_nft_factory {
         msg!("lamports: {}",lamports);
 
         msg!("message: {:?}",message);
-        let signer = get_signer()?;
-        verify_ed25519_ix(&ix, signer.as_ref(), &message, &signature)?;
+        let owner = get_owner()?;
+        verify_ed25519_ix(&ix, owner.as_ref(), &message, &signature)?;
 
         msg!("verify success");
         msg!("contract_vault:{}",ctx.accounts.contract_vault.key);
+
         
         if ctx.accounts.phase.current_nft_id >= ctx.accounts.phase.max_supply {
             msg!("Maximum supply limit reached!");
@@ -172,8 +177,8 @@ pub mod candy_nft_factory {
         message.extend_from_slice(&ctx.accounts.mint.key().to_bytes());
         message.extend_from_slice(&rewards.to_le_bytes());
 
-        let signer = get_signer()?;
-        verify_ed25519_ix(&ix, signer.as_ref(), &message, &signature)?;
+        let owner = get_owner()?;
+        verify_ed25519_ix(&ix, owner.as_ref(), &message, &signature)?;
 
         msg!("verify signature success");
         if ctx.accounts.claim_record.is_claimed {
@@ -234,7 +239,7 @@ fn verify_ed25519_ix(ix: &Instruction, pubkey: &[u8], msg: &[u8], sig: &[u8]) ->
     Ok(())
 }
 
-fn get_signer()->Result<Pubkey> {
+fn get_owner()->Result<Pubkey> {
     let pubkey_str = "BBgai5MfC5s6z944bXTxFK9FpzR5uLkLBpFBhBgPB6LT"; 
     let pubkey = Pubkey::from_str(pubkey_str);
     match pubkey {
@@ -485,7 +490,9 @@ pub enum CandyError {
     #[msg("You have already claimed")]
     DuplicatedClaimError,
     #[msg("Invalid owner")]
-    InvalidOwnerError
+    InvalidOwnerError,
+    #[msg("Only owner")]
+    OnlyOwner
 }
 
 

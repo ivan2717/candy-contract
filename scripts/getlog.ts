@@ -79,7 +79,7 @@ async function getData(uri: string): Promise<ApiResponse> {
 
 async function filterProgramLogs(programPublicKey: PublicKey) {
   const connection = new Connection("https://solana-devnet.g.alchemy.com/v2/cJkK2SdqwYHK-8eElur2mNY1zbuN5do4", 'confirmed');
-  const deployedAt = '5RSwY5wtQdpn3TqZ6daQsu2BukWmpML586eRYeuq2RLPwestwSkjCmeBxm9Tj1YuRZhFUWFCBkGM8ixbsiH2WqZp'
+  const deployedAt = '3tn16TbRZYZNVe1CnqE31fsMQ3uMsxUsNKuFnJChawvEdipraV7Wye3h4cSx9ySyfgteJ72XfBdPv35NRc8JHUx'
 
   console.log(`Fetching signatures for program ID: ${programPublicKey.toBase58()}`);
   let beforeSignature: string | undefined;

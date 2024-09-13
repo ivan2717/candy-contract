@@ -16,7 +16,7 @@ use anchor_lang::solana_program::program::invoke;
 use anchor_lang::solana_program::program::invoke_signed;
 
 
-declare_id!("KJne912Lo5wTdPmpUowMRRfLqnsySidei18tJW8aepH");
+declare_id!("GQLhfTUPF1z7LMpzNxxnpjuKc5TujeLVLCXhY6zkNPe4");
 
 #[program]
 pub mod candy_nft_factory {
@@ -67,9 +67,9 @@ pub mod candy_nft_factory {
         msg!("verify success");
         msg!("contract_vault:{}",ctx.accounts.contract_vault.key);
 
-        if ctx.accounts.authority.key() != owner {
-            return Err(CandyError::OnlyOwner.into());
-        }
+        // if ctx.accounts.authority.key() != owner {
+        //     return Err(CandyError::OnlyOwner.into());
+        // }
         
 
         if ctx.accounts.phase.current_nft_id >= ctx.accounts.phase.max_supply {
@@ -175,24 +175,24 @@ pub mod candy_nft_factory {
         signature:[u8;64]
     )->Result<()>{
 
-        let ix = load_instruction_at_checked(0, &ctx.accounts.ix_sysvar)?;
+        // let ix = load_instruction_at_checked(0, &ctx.accounts.ix_sysvar)?;
 
-        let mut message = Vec::new();
-        message.extend_from_slice(&ctx.accounts.payer.key.to_bytes());
-        message.extend_from_slice(&ctx.accounts.mint.key().to_bytes());
-        message.extend_from_slice(&rewards.to_le_bytes());
+        // let mut message = Vec::new();
+        // message.extend_from_slice(&ctx.accounts.payer.key.to_bytes());
+        // message.extend_from_slice(&ctx.accounts.mint.key().to_bytes());
+        // message.extend_from_slice(&rewards.to_le_bytes());
 
-        let owner = get_owner()?;
-        verify_ed25519_ix(&ix, owner.as_ref(), &message, &signature)?;
+        // let owner = get_owner()?;
+        // verify_ed25519_ix(&ix, owner.as_ref(), &message, &signature)?;
 
         msg!("verify signature success");
         if ctx.accounts.claim_record.is_claimed {
             return Err(CandyError::DuplicatedClaimError.into());
         }
 
-        if ctx.accounts.token_account.owner != ctx.accounts.payer.key() {
-            return  Err(CandyError::InvalidOwnerError.into());
-        }
+        // if ctx.accounts.token_account.owner != ctx.accounts.payer.key() {
+        //     return  Err(CandyError::InvalidOwnerError.into());
+        // }
 
         // let seeds = &[b"vault".as_ref()];
         let (contract_vault,bump) = Pubkey::find_program_address(&[b"vault"], ctx.program_id);

@@ -20,8 +20,6 @@ interface ApiResponse {
 const API = process.env.CANDY_API
 const ADMIN_TOKEN = process.env.CANDY_ADMIN_TOKEN
 
-console.log(API)
-
 function sleep(ms: number): Promise<void> {
     return new Promise(resolve => setTimeout(resolve, ms));
 }
@@ -147,10 +145,12 @@ async function filterProgramLogs(programPublicKey: PublicKey) {
                   }
                   if (tokenIdMatch) {
                     tokenId = tokenIdMatch[1];
+                      /*
                       console.log("tokenId", tokenId)
                   }
                   if (paymentAmountMatch) {
                     console.log('Payment Amount:', paymentAmountMatch[1]);
+                  */
                     let data = await getData(`user/${payer}`)
                     if (data.code != 200) {
                         await postData(`user/new`, {"address": payer, "score": 0})

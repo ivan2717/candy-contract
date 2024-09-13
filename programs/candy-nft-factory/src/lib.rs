@@ -164,6 +164,7 @@ pub mod candy_nft_factory {
         msg!("Minting NFT with details:");
         msg!("Payer: {}", ctx.accounts.payer.key());
         msg!("Token ID: {}", nft_id);
+        msg!("Payment Amount: {}", lamports);
 
         Ok(())
     }

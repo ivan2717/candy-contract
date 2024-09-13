@@ -16,7 +16,7 @@ use anchor_lang::solana_program::program::invoke;
 use anchor_lang::solana_program::program::invoke_signed;
 
 
-declare_id!("F5m1mLL7q24FgWZQDw2egmyiSFh8TvHLx5VtYUbG1mKE");
+declare_id!("KJne912Lo5wTdPmpUowMRRfLqnsySidei18tJW8aepH");
 
 #[program]
 pub mod candy_nft_factory {
@@ -51,22 +51,27 @@ pub mod candy_nft_factory {
         signature:[u8;64]
     ) -> Result<()>{
 
-        let ix = load_instruction_at_checked(0, &ctx.accounts.ix_sysvar)?;
+        // let ix = load_instruction_at_checked(0, &ctx.accounts.ix_sysvar)?;
+        // msg!("expire_at:{}",expire_at);
+        // msg!("signature: {:?}",signature);
+        // let mut message = Vec::new();
+        // message.extend_from_slice(&ctx.accounts.payer.key.to_bytes());
+        // message.extend_from_slice(&lamports.to_le_bytes());
+        // message.extend_from_slice(&expire_at.to_le_bytes());
+        // msg!("lamports: {}",lamports);
 
-        let mut message = Vec::new();
-        message.extend_from_slice(&ctx.accounts.payer.key.to_bytes());
-        message.extend_from_slice(&lamports.to_le_bytes());
-        message.extend_from_slice(&expire_at.to_le_bytes());
-        msg!("lamports: {}",lamports);
-
-        msg!("message: {:?}",message);
+        // msg!("message: {:?}",message);
         let owner = get_owner()?;
-        verify_ed25519_ix(&ix, owner.as_ref(), &message, &signature)?;
+        // verify_ed25519_ix(&ix, owner.as_ref(), &message, &signature)?;
 
         msg!("verify success");
         msg!("contract_vault:{}",ctx.accounts.contract_vault.key);
 
+        if ctx.accounts.authority.key() != owner {
+            return Err(CandyError::OnlyOwner.into());
+        }
         
+
         if ctx.accounts.phase.current_nft_id >= ctx.accounts.phase.max_supply {
             msg!("Maximum supply limit reached!");
             return Err(CandyError::MaxSupplyLimit.into());
@@ -227,6 +232,8 @@ fn verify_ed25519_ix(ix: &Instruction, pubkey: &[u8], msg: &[u8], sig: &[u8]) ->
     msg!("ix.program_id: {} ED25519_ID: {}",ix.program_id,ED25519_ID);
     msg!("ix.accounts.len(): {}",ix.accounts.len());
     msg!("left: {} right: {}",ix.data.len() ,16 + 64 + 32 + msg.len());
+    msg!("ix.data: {:?}",ix.data);
+    msg!("msg: {:?}",msg);
     if  ix.program_id       != ED25519_ID                   ||  // The program id we expect
         ix.accounts.len()   != 0                            ||  // With no context accounts
         ix.data.len()       != (16 + 64 + 32 + msg.len())       // And data of this size

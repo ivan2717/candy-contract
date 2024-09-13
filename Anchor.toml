@@ -5,7 +5,7 @@ resolution = true
 skip-lint = false
 
 [programs.localnet]
-candy-nft-factory = "F5m1mLL7q24FgWZQDw2egmyiSFh8TvHLx5VtYUbG1mKE"
+candy-nft-factory = "KJne912Lo5wTdPmpUowMRRfLqnsySidei18tJW8aepH"
 
 
 [registry]

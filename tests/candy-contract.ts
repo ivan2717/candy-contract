@@ -72,8 +72,9 @@ const mintNFT = async () => {
   const authority = provider.wallet.publicKey;
   const phaseId = new anchor.BN(1)
   const nftId = new anchor.BN(1)
-  const lamports = new anchor.BN(1000000)
-  const time =Math.floor(Date.now()/1000) + 60 * 5 // 过期时间5分钟
+  const lamports = new anchor.BN(1000000000)
+  // const time =Math.floor(Date.now()/1000) + 60 * 5 // 过期时间5分钟
+  const time = 1728718561
   console.log("expireAt: ",time)
   const expireAt = new anchor.BN(time)
   // const expireAt = Math.floor(Date.now()/1000) + 60 * 60
@@ -82,6 +83,13 @@ const mintNFT = async () => {
   const secretKey = Uint8Array.from([100,205,108,196,120,101,128,100,161,22,234,238,168,3,158,161,161,186,131,135,185,33,43,90,27,122,101,130,16,182,12,129,151,81,110,147,30,22,255,161,199,207,128,60,115,4,106,222,159,118,12,159,73,249,129,57,214,143,115,219,210,118,170,236])
   const keyPair = Keypair.fromSecretKey(secretKey)
   const signature = await ed.sign(msg,keyPair.secretKey.slice(0,32))
+
+  console.log("pubkey",provider.wallet.publicKey.toBuffer())
+  console.log("pubkey",provider.wallet.publicKey.toBase58())
+  console.log("message",msg)
+  console.log("signature",signature)
+
+  // return 
 
   // const tx = await candyNftFactory.methods
   //   // .mintNft(phaseId,nftId)
@@ -124,8 +132,9 @@ const mintNFT = async () => {
   tx.lastValidBlockHeight = lastValidBlockHeight;
   tx.recentBlockhash = blockhash;
   tx.feePayer = provider.wallet.publicKey;
+  console.log("xxxxxb",tx)
   tx.sign(keyPair)
-
+  console.log("xxxxxa",tx)
   const hash = await provider.connection.sendRawTransaction(tx.serialize())
   
   console.log("hash=====>",hash)
@@ -208,8 +217,8 @@ const claim= async () => {
 
 
 
-init()
-// mintNFT()
+// init()
+mintNFT()
 // claim()
 
 

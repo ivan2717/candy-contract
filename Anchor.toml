@@ -28,5 +28,6 @@ mint = "ts-node scripts/mint.ts"
 init = "ts-node scripts/init.ts"
 listen = "ts-node scripts/listen.ts"
 log = "ts-node scripts/getlog.ts"
+sign = "ts-node scripts/sign.ts"
 
 

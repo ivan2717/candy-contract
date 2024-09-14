@@ -1,7 +1,7 @@
 import * as ed from "@noble/ed25519";
 import * as anchor from '@coral-xyz/anchor';
 import { Program } from "@coral-xyz/anchor";
-import { Keypair, PublicKey, SystemProgram } from "@solana/web3.js";
+import { ComputeBudgetProgram, Keypair, PublicKey, SystemProgram } from "@solana/web3.js";
 import { assert } from "chai";
 // const ed  = require("@noble/ed25519")
 import { CandyNftFactory } from "../target/types/candy_nft_factory"; // Ensure the path is correct for your project
@@ -81,6 +81,7 @@ const mintNFT = async () => {
   const msg = Uint8Array.from([...provider.wallet.publicKey.toBuffer(),...lamports.toBuffer("le",8),...expireAt.toBuffer("le",8)])
   console.log("=====msg====",msg)
   const secretKey = Uint8Array.from([100,205,108,196,120,101,128,100,161,22,234,238,168,3,158,161,161,186,131,135,185,33,43,90,27,122,101,130,16,182,12,129,151,81,110,147,30,22,255,161,199,207,128,60,115,4,106,222,159,118,12,159,73,249,129,57,214,143,115,219,210,118,170,236])
+
   const keyPair = Keypair.fromSecretKey(secretKey)
   const signature = await ed.sign(msg,keyPair.secretKey.slice(0,32))
 
@@ -89,35 +90,23 @@ const mintNFT = async () => {
   console.log("message",msg)
   console.log("signature",signature)
 
-  // return 
-
-  // const tx = await candyNftFactory.methods
-  //   // .mintNft(phaseId,nftId)
-  //   .mintNft(provider.wallet.publicKey,lamports,expireAt,Array.from(signature))
-  //   .accounts({
-  //     authority: provider.wallet.publicKey,
-  //     payer: provider.wallet.publicKey,
-  //     // metadataProgram: TOKEN_METADATA_PROGRAM_ID,
-  //     phase: phasePda,
-  //   })
-  //   .signers([])
-  //   .rpc();
   let tx = new anchor.web3.Transaction()
+
   .add(
+    ComputeBudgetProgram.setComputeUnitLimit({
+      units: 500_000,
+    }),
       // Ed25519 instruction
       anchor.web3.Ed25519Program.createInstructionWithPublicKey({
-          publicKey: provider.wallet.publicKey.toBuffer(),
+          publicKey: new PublicKey("BBgai5MfC5s6z944bXTxFK9FpzR5uLkLBpFBhBgPB6LT").toBuffer(),
+          // publicKey: provider.wallet.publicKey.toBuffer(),
           message: msg,
           signature: signature,
       })
   )
   .add(
-      // Our instruction
       await candyNftFactory.methods
-    // .mintNft(phaseId,nftId)
     .mintNft(lamports,expireAt,Array.from(signature))
-    // .mintNft(expireAt,Buffer.from(msg),Array.from(signature))
-    // .mintNft(provider.wallet.publicKey,lamports,expireAt,Buffer.from(msg),Array.from(signature))
     .accounts({
       authority: provider.wallet.publicKey,
       payer: provider.wallet.publicKey,
@@ -132,10 +121,12 @@ const mintNFT = async () => {
   tx.lastValidBlockHeight = lastValidBlockHeight;
   tx.recentBlockhash = blockhash;
   tx.feePayer = provider.wallet.publicKey;
-  console.log("xxxxxb",tx)
-  tx.sign(keyPair)
-  console.log("xxxxxa",tx)
-  const hash = await provider.connection.sendRawTransaction(tx.serialize())
+  console.log("xxxxxb",tx.instructions.length)
+  // tx.sign(keyPair)
+  const signedTx = await provider.wallet.signTransaction(tx)
+  console.log("xxxxxa",tx.instructions.length)
+
+  const hash = await provider.connection.sendRawTransaction(signedTx.serialize())
   
   console.log("hash=====>",hash)
 }
@@ -182,9 +173,12 @@ const claim= async () => {
   console.log("tokenAccount====",tokenAccount.toBase58())
   let tx = new anchor.web3.Transaction()
   .add(
+    ComputeBudgetProgram.setComputeUnitLimit({
+      units: 500_000,
+    }),
       // Ed25519 instruction
       anchor.web3.Ed25519Program.createInstructionWithPublicKey({
-          publicKey: provider.wallet.publicKey.toBuffer(),
+          publicKey: new PublicKey("BBgai5MfC5s6z944bXTxFK9FpzR5uLkLBpFBhBgPB6LT").toBuffer(),
           message: msg,
           signature: signature,
       })
@@ -207,9 +201,10 @@ const claim= async () => {
   tx.lastValidBlockHeight = lastValidBlockHeight;
   tx.recentBlockhash = blockhash;
   tx.feePayer = provider.wallet.publicKey;
-  tx.sign(keyPair)
+  // tx.sign(keyPair)
+  const signedTx = await provider.wallet.signTransaction(tx)
 
-  const hash = await provider.connection.sendRawTransaction(tx.serialize())
+  const hash = await provider.connection.sendRawTransaction(signedTx.serialize())
   
   console.log("hash=====>",hash)
 }

@@ -16,7 +16,7 @@ use anchor_lang::solana_program::program::invoke;
 use anchor_lang::solana_program::program::invoke_signed;
 
 
-declare_id!("GQLhfTUPF1z7LMpzNxxnpjuKc5TujeLVLCXhY6zkNPe4");
+declare_id!("BdnJUuLWJy38K2At7zdUuCGu64SVwwMTDg4MSsNT6jxx");
 
 #[program]
 pub mod candy_nft_factory {
@@ -51,18 +51,26 @@ pub mod candy_nft_factory {
         signature:[u8;64]
     ) -> Result<()>{
 
-        // let ix = load_instruction_at_checked(0, &ctx.accounts.ix_sysvar)?;
-        // msg!("expire_at:{}",expire_at);
-        // msg!("signature: {:?}",signature);
-        // let mut message = Vec::new();
-        // message.extend_from_slice(&ctx.accounts.payer.key.to_bytes());
-        // message.extend_from_slice(&lamports.to_le_bytes());
-        // message.extend_from_slice(&expire_at.to_le_bytes());
-        // msg!("lamports: {}",lamports);
+        let mut ix_ed25519_index = 0;
+        while let Ok(ix) =load_instruction_at_checked(ix_ed25519_index,&ctx.accounts.ix_sysvar)   {
+            if ix.program_id == ED25519_ID {
+                break;
+            }
+            ix_ed25519_index += 1;
+        }
 
-        // msg!("message: {:?}",message);
+        let ix = load_instruction_at_checked(ix_ed25519_index, &ctx.accounts.ix_sysvar)?;
+        msg!("expire_at:{}",expire_at);
+        msg!("signature: {:?}",signature);
+        let mut message = Vec::new();
+        message.extend_from_slice(&ctx.accounts.payer.key.to_bytes());
+        message.extend_from_slice(&lamports.to_le_bytes());
+        message.extend_from_slice(&expire_at.to_le_bytes());
+        msg!("lamports: {}",lamports);
+
+        msg!("message: {:?}",message);
         let owner = get_owner()?;
-        // verify_ed25519_ix(&ix, owner.as_ref(), &message, &signature)?;
+        verify_ed25519_ix(&ix, owner.as_ref(), &message, &signature)?;
 
         msg!("verify success");
         msg!("contract_vault:{}",ctx.accounts.contract_vault.key);
@@ -176,24 +184,32 @@ pub mod candy_nft_factory {
         signature:[u8;64]
     )->Result<()>{
 
-        // let ix = load_instruction_at_checked(0, &ctx.accounts.ix_sysvar)?;
+        let mut ix_ed25519_index = 0;
+        while let Ok(ix) =load_instruction_at_checked(ix_ed25519_index,&ctx.accounts.ix_sysvar)   {
+            if ix.program_id == ED25519_ID {
+                break;
+            }
+            ix_ed25519_index += 1;
+        }
 
-        // let mut message = Vec::new();
-        // message.extend_from_slice(&ctx.accounts.payer.key.to_bytes());
-        // message.extend_from_slice(&ctx.accounts.mint.key().to_bytes());
-        // message.extend_from_slice(&rewards.to_le_bytes());
+        let ix = load_instruction_at_checked(ix_ed25519_index, &ctx.accounts.ix_sysvar)?;
 
-        // let owner = get_owner()?;
-        // verify_ed25519_ix(&ix, owner.as_ref(), &message, &signature)?;
+        let mut message = Vec::new();
+        message.extend_from_slice(&ctx.accounts.payer.key.to_bytes());
+        message.extend_from_slice(&ctx.accounts.mint.key().to_bytes());
+        message.extend_from_slice(&rewards.to_le_bytes());
+
+        let owner = get_owner()?;
+        verify_ed25519_ix(&ix, owner.as_ref(), &message, &signature)?;
 
         msg!("verify signature success");
         if ctx.accounts.claim_record.is_claimed {
             return Err(CandyError::DuplicatedClaimError.into());
         }
 
-        // if ctx.accounts.token_account.owner != ctx.accounts.payer.key() {
-        //     return  Err(CandyError::InvalidOwnerError.into());
-        // }
+        if ctx.accounts.token_account.owner != ctx.accounts.payer.key() {
+            return  Err(CandyError::InvalidOwnerError.into());
+        }
 
         // let seeds = &[b"vault".as_ref()];
         let (contract_vault,bump) = Pubkey::find_program_address(&[b"vault"], ctx.program_id);
@@ -287,6 +303,8 @@ pub fn check_ed25519_data(data: &[u8], pubkey: &[u8], msg: &[u8], sig: &[u8]) ->
 
     // Header and Arg Checks
 
+    msg!("check header");
+
     // Header
     if  num_signatures                  != &exp_num_signatures.to_le_bytes()        ||
         padding                         != &[0]                                     ||
@@ -301,6 +319,12 @@ pub fn check_ed25519_data(data: &[u8], pubkey: &[u8], msg: &[u8], sig: &[u8]) ->
         return Err(CandyError::SigVerificationFailed.into());
     }
 
+    msg!("data_pubkey{:?}",data_pubkey);
+    msg!("pubkey{:?}",pubkey);
+    msg!("data_msg{:?}",data_msg);
+    msg!("msg{:?}",msg);
+    msg!("data_sig{:?}",data_sig);
+    msg!("sig{:?}",sig);
     // Arguments
     if  data_pubkey != pubkey   ||
         data_msg    != msg      ||

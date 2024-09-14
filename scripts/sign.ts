@@ -8,14 +8,16 @@ import { hexStringToUint8Array, uint8ArrayToHexString } from "./lib"
 const idl = require('../target/idl/candy_nft_factory.json'); 
 
 const provider = anchor.AnchorProvider.env()
-const lamports = new anchor.BN(1000000)
+const lamports = new anchor.BN(1000000000)
 
 async function main() {
 
-  const time =Math.floor(Date.now()/1000) + 86400 * 30 // 过期时间5分钟
+  // const time =Math.floor(Date.now()/1000) + 86400 * 30 // 过期时间5分钟
+  const time = 1728718561
   console.log("expireAt: ",time)
   const expireAt = new anchor.BN(time)
     console.log(provider.wallet.publicKey)
+    console.log("user",provider.wallet.publicKey.toBase58())
   const msg = Uint8Array.from([...provider.wallet.publicKey.toBuffer(),...lamports.toBuffer("le",8),...expireAt.toBuffer("le",8)])
   console.log("=====msg====",msg)
   const pk = '64cd6cc478658064a116eaeea8039ea1a1ba8387b9212b5a1b7a658210b60c8197516e931e16ffa1c7cf803c73046ade9f760c9f49f98139d68f73dbd276aaec'

@@ -78,6 +78,7 @@ const mintNFT = async () => {
   console.log("expireAt: ",time)
   const expireAt = new anchor.BN(time)
   // const expireAt = Math.floor(Date.now()/1000) + 60 * 60
+  console.log("user",provider.wallet.publicKey.toBase58())
   const msg = Uint8Array.from([...provider.wallet.publicKey.toBuffer(),...lamports.toBuffer("le",8),...expireAt.toBuffer("le",8)])
   console.log("=====msg====",msg)
   const secretKey = Uint8Array.from([100,205,108,196,120,101,128,100,161,22,234,238,168,3,158,161,161,186,131,135,185,33,43,90,27,122,101,130,16,182,12,129,151,81,110,147,30,22,255,161,199,207,128,60,115,4,106,222,159,118,12,159,73,249,129,57,214,143,115,219,210,118,170,236])
@@ -213,8 +214,8 @@ const claim= async () => {
 
 
 // init()
-// mintNFT()
-claim()
+mintNFT()
+// claim()
 
 
 function numberToBuffer(num: number): Buffer {

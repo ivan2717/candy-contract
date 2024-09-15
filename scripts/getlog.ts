@@ -98,115 +98,116 @@ async function filterProgramLogs(programPublicKey: PublicKey) {
   }
 
   do {
-      beforeSignature = await redis.get('beforeSignature');
-      untilSignature  = await redis.get('untilSignature');
-      beforeSlot = await redis.get("beforeSlot")
-      startAtSlot = await redis.get("startAtSlot")
-      signature0 = await redis.get("signature0")
-
-      // Fetch transaction signatures associated with the program
       try {
+          beforeSignature = await redis.get('beforeSignature');
+          untilSignature  = await redis.get('untilSignature');
+          beforeSlot = await redis.get("beforeSlot")
+          startAtSlot = await redis.get("startAtSlot")
+          signature0 = await redis.get("signature0")
+
+          // Fetch transaction signatures associated with the program
           signatures = await connection.getSignaturesForAddress(programPublicKey, {
             before: beforeSignature,
             limit: 3, // Adjust the number of signatures as needed
           });
 
-      } catch {
-          await sleep(5000)
-          continue
-      }
-      if (signatures.length === 0) {
-          await sleep(5000)
-          continue
-      }
-      console.log(`Found ${signatures.length} signatures. Fetching logs...`);
+          if (signatures.length === 0) {
+              await sleep(5000)
+              continue
+          }
+          console.log(`Found ${signatures.length} signatures. Fetching logs...`);
 
-      for (const signatureInfo of signatures) {
-        const signature = signatureInfo.signature;
+          for (const signatureInfo of signatures) {
+            const signature = signatureInfo.signature;
 
 
-        if (!signature0) {
-            signature0 = signature
-            await redis.set("signature0", signature0)
-        }
+            if (!signature0) {
+                signature0 = signature
+                await redis.set("signature0", signature0)
+            }
 
-        const txDetails = await connection.getTransaction(signature, { commitment: 'confirmed' });
+            const txDetails = await connection.getTransaction(signature, { commitment: 'confirmed' });
 
-        if (txDetails && txDetails.meta) {
-          const logs = txDetails.meta.logMessages;
+            if (txDetails && txDetails.meta) {
+              const logs = txDetails.meta.logMessages;
 
-          if (logs) {
-            console.log(`Logs for transaction: ${signature} ${signatureInfo.slot}`);
-            for (let idx in logs) {
-                let log = logs[idx]
-                if (log.includes("Minting NFT with details")) {
-                    mintlog = true
+              if (logs) {
+                console.log(`Logs for transaction: ${signature} ${signatureInfo.slot}`);
+                for (let idx in logs) {
+                    let log = logs[idx]
+                    if (log.includes("Minting NFT with details")) {
+                        mintlog = true
+                    }
+                    if (mintlog){
+
+                      const payerMatch = log.match(/Payer: (\w+)/);
+                      const tokenIdMatch = log.match(/Token ID: (\d+)/);
+                      const mintAddressMatch = log.match(/Mint Address: (\w+)/);
+                      const paymentAmountMatch = log.match(/Payment Amount: (\d+)/);
+
+                      if (payerMatch) {
+                        payer = payerMatch[1];
+                      }
+                      if (tokenIdMatch) {
+                        tokenId = tokenIdMatch[1];
+                          console.log("tokenId", tokenId)
+                      }
+                      if (mintAddressMatch) {
+                          mintAddress = mintAddressMatch[1]
+                          console.log("tokenId", tokenId)
+                      }
+                      if (paymentAmountMatch) {
+                        paymentAmount = Number(paymentAmountMatch[1])
+                        console.log('Mint Address:', mintAddress);
+                        let data = await getData(`user/${payer}`)
+                        if (data.code != 200) {
+                            await postData(`user/new`, {"address": payer, "score": 0})
+                        }
+                        data = await getData(`user/${payer}`)
+                        if (data.code != 200) {
+                            console.log(`Failed to get user info ${payer}`)
+                            throw `Failed to get user info ${payer}`
+                        }
+                        let nftId = await redis.get(`${payer}_${paymentAmount}`)
+                        if (!nftId) {
+                            const project = await getData("project/1")
+                            project.data.NFT.map((nft, i) => {
+                                if (nft.price * 1e9 == paymentAmount) {
+                                    nftId =  `${nft.id}`
+                                }
+                            })
+                        }
+                        await postData("user/nft", {"tokenId": tokenId, "userId": data.data.id, "txId": signature, "nftId": nftId ? Number(nftId) : 1, "mint": mintAddress})
+                        mintlog = false
+                      }
+                    }
                 }
-                if (mintlog){
+              }
+            } else {
+              console.log(`No logs found for transaction: ${signature}`);
+            }
+            if (!beforeSlot || Number(beforeSlot) > Number(signatureInfo.slot)) {
+                beforeSignature = signature
+                await redis.set("beforeSignature", signature)
+                await redis.set("beforeSlot", signatureInfo.slot)
+            }
 
-                  const payerMatch = log.match(/Payer: (\w+)/);
-                  const tokenIdMatch = log.match(/Token ID: (\d+)/);
-                  const mintAddressMatch = log.match(/Mint Address: (\w+)/);
-                  const paymentAmountMatch = log.match(/Payment Amount: (\d+)/);
-
-                  if (payerMatch) {
-                    payer = payerMatch[1];
-                  }
-                  if (tokenIdMatch) {
-                    tokenId = tokenIdMatch[1];
-                      console.log("tokenId", tokenId)
-                  }
-                  if (mintAddressMatch) {
-                      mintAddress = mintAddressMatch[1]
-                      console.log("tokenId", tokenId)
-                  }
-                  if (paymentAmountMatch) {
-                    paymentAmount = Number(paymentAmountMatch[1])
-                    console.log('Mint Address:', mintAddress);
-                    let data = await getData(`user/${payer}`)
-                    if (data.code != 200) {
-                        await postData(`user/new`, {"address": payer, "score": 0})
-                    }
-                    data = await getData(`user/${payer}`)
-                    if (data.code != 200) {
-                        console.log(`Failed to get user info ${payer}`)
-                        throw `Failed to get user info ${payer}`
-                    }
-                    let nftId = await redis.get(`${payer}_${paymentAmount}`)
-                    if (!nftId) {
-                        const project = await getData("project/1")
-                        project.data.NFT.map((nft, i) => {
-                            if (nft.price * 1e9 == paymentAmount) {
-                                nftId =  `${nft.id}`
-                            }
-                        })
-                    }
-                    await postData("user/nft", {"tokenId": tokenId, "userId": data.data.id, "txId": signature, "nftId": nftId ? Number(nftId) : 1, "mint": mintAddress})
-                    mintlog = false
-                  }
-                }
+            if (signature == untilSignature) {
+                await redis.set("untilSignature", signature0)
+                await redis.del("beforeSignature")
+                await redis.del("beforeSlot")
+                await redis.del("signature0")
+                signature0 = undefined
+                await sleep(5000)
+                break
             }
           }
-        } else {
-          console.log(`No logs found for transaction: ${signature}`);
-        }
-        if (!beforeSlot || Number(beforeSlot) > Number(signatureInfo.slot)) {
-            beforeSignature = signature
-            await redis.set("beforeSignature", signature)
-            await redis.set("beforeSlot", signatureInfo.slot)
-        }
 
-        if (signature == untilSignature) {
-            await redis.set("untilSignature", signature0)
-            await redis.del("beforeSignature")
-            await redis.del("beforeSlot")
-            await redis.del("signature0")
-            signature0 = undefined
-            await sleep(5000)
-            break
-        }
       }
-
+      catch {
+          await sleep(5000)
+          continue
+      }
 
   } while (signatures.length > 0)
 }

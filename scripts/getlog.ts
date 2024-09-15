@@ -8,6 +8,7 @@ import { CandyNftFactory } from "../target/types/candy_nft_factory";
 dotenv.config()
 
 const redis = new Redis( {
+    host: process.env.REDIS,
     db: 7
 })
 
@@ -89,6 +90,8 @@ async function filterProgramLogs(programPublicKey: PublicKey) {
   let signature0: string | undefined;
   let payer: string;
   let tokenId: string;
+  let paymentAmount: number;
+  let mintAddress: string;
   
   if (!untilSignature) {
       await redis.set("untilSignature", deployedAt)
@@ -102,14 +105,19 @@ async function filterProgramLogs(programPublicKey: PublicKey) {
       signature0 = await redis.get("signature0")
 
       // Fetch transaction signatures associated with the program
-      connection.getConfirmedSignaturesForAddress2
-      signatures = await connection.getSignaturesForAddress(programPublicKey, {
-        before: beforeSignature,
-        limit: 3, // Adjust the number of signatures as needed
-      });
+      try {
+          signatures = await connection.getSignaturesForAddress(programPublicKey, {
+            before: beforeSignature,
+            limit: 3, // Adjust the number of signatures as needed
+          });
 
+      } catch {
+          await sleep(5000)
+          continue
+      }
       if (signatures.length === 0) {
-          break
+          await sleep(5000)
+          continue
       }
       console.log(`Found ${signatures.length} signatures. Fetching logs...`);
 
@@ -138,7 +146,8 @@ async function filterProgramLogs(programPublicKey: PublicKey) {
 
                   const payerMatch = log.match(/Payer: (\w+)/);
                   const tokenIdMatch = log.match(/Token ID: (\d+)/);
-                  const mintAddress = log.match(/Mint Address: (\w+)/);
+                  const mintAddressMatch = log.match(/Mint Address: (\w+)/);
+                  const paymentAmountMatch = log.match(/Payment Amount: (\d+)/);
 
                   if (payerMatch) {
                     payer = payerMatch[1];
@@ -147,8 +156,13 @@ async function filterProgramLogs(programPublicKey: PublicKey) {
                     tokenId = tokenIdMatch[1];
                       console.log("tokenId", tokenId)
                   }
-                  if (mintAddress) {
-                    console.log('Mint Address:', mintAddress[1]);
+                  if (mintAddressMatch) {
+                      mintAddress = mintAddressMatch[1]
+                      console.log("tokenId", tokenId)
+                  }
+                  if (paymentAmountMatch) {
+                    paymentAmount = Number(paymentAmountMatch[1])
+                    console.log('Mint Address:', mintAddress);
                     let data = await getData(`user/${payer}`)
                     if (data.code != 200) {
                         await postData(`user/new`, {"address": payer, "score": 0})
@@ -158,7 +172,16 @@ async function filterProgramLogs(programPublicKey: PublicKey) {
                         console.log(`Failed to get user info ${payer}`)
                         throw `Failed to get user info ${payer}`
                     }
-                    await postData("user/nft", {"tokenId": tokenId, "userId": data.data.id, "txId": signature, "nftId": 1, "mint": mintAddress[1]})
+                    let nftId = await redis.get(`${payer}_${paymentAmount}`)
+                    if (!nftId) {
+                        const project = await getData("project/1")
+                        project.data.NFT.map((nft, i) => {
+                            if (nft.price * 1e9 == paymentAmount) {
+                                nftId =  `${nft.id}`
+                            }
+                        })
+                    }
+                    await postData("user/nft", {"tokenId": tokenId, "userId": data.data.id, "txId": signature, "nftId": nftId ? Number(nftId) : 1, "mint": mintAddress})
                     mintlog = false
                   }
                 }

@@ -60,7 +60,6 @@ async function main() {
   let sig1 = await ed.sign(msg1, keyPair.secretKey.slice(0, 32))
     console.log("sig1",uint8ArrayToHexString(sig1))
 
-    return
 
   // const tx = await candyNftFactory.methods
   //   // .mintNft(phaseId,nftId)
@@ -77,7 +76,7 @@ async function main() {
   .add(
       // Ed25519 instruction
       anchor.web3.Ed25519Program.createInstructionWithPublicKey({
-          publicKey: provider.wallet.publicKey.toBuffer(),
+          publicKey: new PublicKey("BBgai5MfC5s6z944bXTxFK9FpzR5uLkLBpFBhBgPB6LT").toBuffer(),
           message: msg,
           signature: signature,
       })
@@ -103,7 +102,8 @@ async function main() {
   tx.lastValidBlockHeight = lastValidBlockHeight;
   tx.recentBlockhash = blockhash;
   tx.feePayer = provider.wallet.publicKey;
-  tx.sign(keyPair)
+
+  const signedTx = await provider.wallet.signTransaction(tx)
 
   const hash = await provider.connection.sendRawTransaction(tx.serialize())
   

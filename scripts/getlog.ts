@@ -77,7 +77,7 @@ async function getData(uri: string): Promise<ApiResponse> {
 
 async function filterProgramLogs(programPublicKey: PublicKey) {
   const connection = new Connection("https://solana-devnet.g.alchemy.com/v2/cJkK2SdqwYHK-8eElur2mNY1zbuN5do4", 'confirmed');
-  const deployedAt = '3tn16TbRZYZNVe1CnqE31fsMQ3uMsxUsNKuFnJChawvEdipraV7Wye3h4cSx9ySyfgteJ72XfBdPv35NRc8JHUx'
+  const deployedAt = '5Pg41SjAtD6sK3ysTFGbyP4Ge6g6V7McoL3nHGFdoCHghrezexjz13ioFAYm9CWiHTJ3SybpgUQpECHW3A4KyaG5'
 
   console.log(`Fetching signatures for program ID: ${programPublicKey.toBase58()}`);
   let beforeSignature: string | undefined;
@@ -138,19 +138,17 @@ async function filterProgramLogs(programPublicKey: PublicKey) {
 
                   const payerMatch = log.match(/Payer: (\w+)/);
                   const tokenIdMatch = log.match(/Token ID: (\d+)/);
-                  const paymentAmountMatch = log.match(/Payment Amount: (\d+)/);
+                  const mintAddress = log.match(/Mint Address: (\w+)/);
 
                   if (payerMatch) {
                     payer = payerMatch[1];
                   }
                   if (tokenIdMatch) {
                     tokenId = tokenIdMatch[1];
-                      /*
                       console.log("tokenId", tokenId)
                   }
-                  if (paymentAmountMatch) {
-                    console.log('Payment Amount:', paymentAmountMatch[1]);
-                  */
+                  if (mintAddress) {
+                    console.log('Mint Address:', mintAddress[1]);
                     let data = await getData(`user/${payer}`)
                     if (data.code != 200) {
                         await postData(`user/new`, {"address": payer, "score": 0})
@@ -160,7 +158,7 @@ async function filterProgramLogs(programPublicKey: PublicKey) {
                         console.log(`Failed to get user info ${payer}`)
                         throw `Failed to get user info ${payer}`
                     }
-                    await postData("user/nft", {"tokenId": tokenId, "userId": data.data.id, "txId": signature, "nftId": 1})
+                    await postData("user/nft", {"tokenId": tokenId, "userId": data.data.id, "txId": signature, "nftId": 1, "mint": mintAddress[1]})
                     mintlog = false
                   }
                 }

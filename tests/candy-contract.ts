@@ -213,8 +213,8 @@ const claim= async () => {
 
 
 
-// init()
-mintNFT()
+init()
+// mintNFT()
 // claim()
 
 

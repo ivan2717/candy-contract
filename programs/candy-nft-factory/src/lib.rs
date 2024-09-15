@@ -16,7 +16,7 @@ use anchor_lang::solana_program::program::invoke;
 use anchor_lang::solana_program::program::invoke_signed;
 
 
-declare_id!("BdnJUuLWJy38K2At7zdUuCGu64SVwwMTDg4MSsNT6jxx");
+declare_id!("7uMAv8TegvF3xPxR4Bo8YnKUrfRypbmjCDQecZCQX5ZW");
 
 #[program]
 pub mod candy_nft_factory {
@@ -60,20 +60,14 @@ pub mod candy_nft_factory {
         }
 
         let ix = load_instruction_at_checked(ix_ed25519_index, &ctx.accounts.ix_sysvar)?;
-        msg!("expire_at:{}",expire_at);
-        msg!("signature: {:?}",signature);
+
         let mut message = Vec::new();
         message.extend_from_slice(&ctx.accounts.payer.key.to_bytes());
         message.extend_from_slice(&lamports.to_le_bytes());
         message.extend_from_slice(&expire_at.to_le_bytes());
-        msg!("lamports: {}",lamports);
 
-        msg!("message: {:?}",message);
         let owner = get_owner()?;
         verify_ed25519_ix(&ix, owner.as_ref(), &message, &signature)?;
-
-        msg!("verify success");
-        msg!("contract_vault:{}",ctx.accounts.contract_vault.key);
 
         // if ctx.accounts.authority.key() != owner {
         //     return Err(CandyError::OnlyOwner.into());
@@ -213,12 +207,8 @@ pub mod candy_nft_factory {
         }
 
         // let seeds = &[b"vault".as_ref()];
-        let (contract_vault,bump) = Pubkey::find_program_address(&[b"vault"], ctx.program_id);
+        let (_contract_vault,bump) = Pubkey::find_program_address(&[b"vault"], ctx.program_id);
 
-        msg!("bump1: {} bump2{}",bump,ctx.bumps.contract_vault);
-        msg!("mint: {} token_account: {}",ctx.accounts.mint.key(),ctx.accounts.token_account.key());
-        msg!("contract_vault1: {} contract_vault2: {} ",contract_vault, ctx.accounts.contract_vault.key());
-        msg!("reward: {}",rewards);
         let transfer_instruction = system_instruction::transfer(
             &ctx.accounts.contract_vault.key(),
             &ctx.accounts.payer.key(),
@@ -247,11 +237,6 @@ pub mod candy_nft_factory {
 
 fn verify_ed25519_ix(ix: &Instruction, pubkey: &[u8], msg: &[u8], sig: &[u8]) -> Result<()> {
 
-    msg!("ix.program_id: {} ED25519_ID: {}",ix.program_id,ED25519_ID);
-    msg!("ix.accounts.len(): {}",ix.accounts.len());
-    msg!("left: {} right: {}",ix.data.len() ,16 + 64 + 32 + msg.len());
-    msg!("ix.data: {:?}",ix.data);
-    msg!("msg: {:?}",msg);
     if  ix.program_id       != ED25519_ID                   ||  // The program id we expect
         ix.accounts.len()   != 0                            ||  // With no context accounts
         ix.data.len()       != (16 + 64 + 32 + msg.len())       // And data of this size
@@ -304,8 +289,6 @@ pub fn check_ed25519_data(data: &[u8], pubkey: &[u8], msg: &[u8], sig: &[u8]) ->
 
     // Header and Arg Checks
 
-    msg!("check header");
-
     // Header
     if  num_signatures                  != &exp_num_signatures.to_le_bytes()        ||
         padding                         != &[0]                                     ||
@@ -319,13 +302,6 @@ pub fn check_ed25519_data(data: &[u8], pubkey: &[u8], msg: &[u8], sig: &[u8]) ->
     {   
         return Err(CandyError::SigVerificationFailed.into());
     }
-
-    msg!("data_pubkey{:?}",data_pubkey);
-    msg!("pubkey{:?}",pubkey);
-    msg!("data_msg{:?}",data_msg);
-    msg!("msg{:?}",msg);
-    msg!("data_sig{:?}",data_sig);
-    msg!("sig{:?}",sig);
     // Arguments
     if  data_pubkey != pubkey   ||
         data_msg    != msg      ||

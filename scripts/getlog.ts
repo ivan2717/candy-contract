@@ -88,8 +88,6 @@ async function filterProgramLogs(programPublicKey: PublicKey) {
   let signatures;
   let mintlog;
   let claimlog;
-  let mintTx = "";
-  let claimTx = "";
   let signature0: string | undefined;
   let payer: string;
   let tokenId: string;
@@ -184,16 +182,14 @@ async function filterProgramLogs(programPublicKey: PublicKey) {
                             })
                         }
                         if (mintlog) {
-                            mintTx = signature
+                            await postData("user/nft", {"tokenId": tokenId, "userId": data.data.id, "txId": signature, "claimTx": "", "nftId": nftId ? Number(nftId) : 1, "mint": mintAddress})
                         }
-                        if (claimTx) {
-                            claimTx = signature
+                        if (claimlog) {
+                            let _nft = await getData(`user/nft/mint?address=${mintAddress}`)
+                            await postData("user/nft", {"tokenId": _nft.data.tokenId, "userId": data.data.id, "txId": "", "claimTx": signature, "nftId": nftId ? Number(nftId) : 1, "mint": mintAddress})
                         }
-                        await postData("user/nft", {"tokenId": tokenId, "userId": data.data.id, "txId": mintTx, "claimTx": claimTx, "nftId": nftId ? Number(nftId) : 1, "mint": mintAddress})
                         mintlog = false
                         claimlog = false
-                        mintTx = ""
-                        claimTx = ""
                       }
                     }
                 }

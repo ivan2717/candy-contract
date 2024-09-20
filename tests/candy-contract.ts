@@ -125,6 +125,7 @@ const mintNFT = async () => {
   console.log("xxxxxb",tx.instructions.length)
   // tx.sign(keyPair)
   const signedTx = await provider.wallet.signTransaction(tx)
+  console.log("provider.wallet: ",provider.wallet.publicKey.toBase58())
   console.log("xxxxxa",tx.instructions.length)
 
   const hash = await provider.connection.sendRawTransaction(signedTx.serialize())
@@ -213,9 +214,9 @@ const claim= async () => {
 
 
 
-init()
+// init()
 // mintNFT()
-// claim()
+claim()
 
 
 function numberToBuffer(num: number): Buffer {

@@ -8,7 +8,7 @@ use anchor_spl::metadata::{
     create_master_edition_v3, create_metadata_accounts_v3, CreateMasterEditionV3,
     CreateMetadataAccountsV3, Metadata,
 };
-use anchor_spl::token::{mint_to, Mint, MintTo, Token, TokenAccount};
+use anchor_spl::token::{mint_to, Mint, MintTo, Token, TokenAccount,};
 use mpl_token_metadata::types::{DataV2,Collection};
 use anchor_lang::solana_program::ed25519_program::ID as ED25519_ID;
 use anchor_lang::solana_program::system_instruction;
@@ -16,7 +16,7 @@ use anchor_lang::solana_program::program::invoke;
 use anchor_lang::solana_program::program::invoke_signed;
 
 
-declare_id!("7uMAv8TegvF3xPxR4Bo8YnKUrfRypbmjCDQecZCQX5ZW");
+declare_id!("BMKppstCd2kCnzNmVyWXdJmWmjJbfaWK56BKX8eGHKuC");
 
 #[program]
 pub mod candy_nft_factory {
@@ -68,6 +68,7 @@ pub mod candy_nft_factory {
 
         let owner = get_owner()?;
         verify_ed25519_ix(&ix, owner.as_ref(), &message, &signature)?;
+        msg!("Verify Success");
 
         // if ctx.accounts.authority.key() != owner {
         //     return Err(CandyError::OnlyOwner.into());
@@ -229,6 +230,11 @@ pub mod candy_nft_factory {
         )?;
         
         ctx.accounts.claim_record.is_claimed = true;
+
+        msg!("Claim NFT with details:");
+        msg!("Payer: {}", ctx.accounts.payer.key());
+        msg!("Mint Address: {}", ctx.accounts.mint.to_account_info().key());
+        msg!("Payment Amount: {}", rewards);
         Ok(())
     }
 
@@ -359,16 +365,17 @@ pub struct InitPhase<'info> {
 pub struct MintNFT<'info>{
 
     #[account(mut)]
-    pub authority:Signer<'info>,
+    pub payer: Signer<'info>,
 
     #[account(mut)]
-    pub payer: Signer<'info>,
+    pub authority:Signer<'info>,
 
     #[account( 
         init,
         payer = payer, 
         mint::decimals = 0,
         mint::authority = authority,
+        // mint::mint_authority = authority,
         mint::freeze_authority = authority,
         // seeds = ["mint".as_bytes(),phase_id.to_le_bytes().as_ref(), nft_id.to_le_bytes().as_ref()], 
         seeds = ["mint".as_bytes(),phase.phase_id.to_le_bytes().as_ref(), phase.current_nft_id.to_le_bytes().as_ref()], 

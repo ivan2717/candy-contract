@@ -87,6 +87,7 @@ async function filterProgramLogs(programPublicKey: PublicKey) {
   let startAtSlot: string | 0;
   let signatures;
   let mintlog;
+  let _body = {}
   let claimlog;
   let signature0: string | undefined;
   let payer: string;
@@ -182,11 +183,19 @@ async function filterProgramLogs(programPublicKey: PublicKey) {
                             })
                         }
                         if (mintlog) {
+                            console.log("new nft")
                             await postData("user/nft", {"tokenId": tokenId, "userId": data.data.id, "txId": signature, "claimTx": "", "nftId": nftId ? Number(nftId) : 1, "mint": mintAddress})
                         }
                         if (claimlog) {
+                            console.log("update claim")
                             let _nft = await getData(`user/nft/mint?address=${mintAddress}`)
-                            await postData("user/nft", {"tokenId": _nft.data.tokenId, "userId": data.data.id, "txId": "", "claimTx": signature, "nftId": nftId ? Number(nftId) : 1, "mint": mintAddress})
+                            console.log 
+                            if (_nft.code == 20)
+                                _body = {"tokenId": _nft.data.tokenId, "userId": data.data.id, "txId": "", "claimTx": signature, "nftId": nftId ? Number(nftId) : 1, "mint": mintAddress}
+                            else 
+                                _body = {"tokenId": "", "userId": data.data.id, "txId": "", "claimTx": signature, "nftId": nftId ? Number(nftId) : 1, "mint": mintAddress}
+                            console.log(_body)
+                            await postData("user/nft", _body)
                         }
                         mintlog = false
                         claimlog = false

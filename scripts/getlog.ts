@@ -88,8 +88,8 @@ async function filterProgramLogs(programPublicKey: PublicKey) {
   let signatures;
   let mintlog;
   let claimlog;
-  let mintTx;
-  let claimTx;
+  let mintTx = "";
+  let claimTx = "";
   let signature0: string | undefined;
   let payer: string;
   let tokenId: string;
@@ -192,6 +192,8 @@ async function filterProgramLogs(programPublicKey: PublicKey) {
                         await postData("user/nft", {"tokenId": tokenId, "userId": data.data.id, "txId": mintTx, "claimTx": claimTx, "nftId": nftId ? Number(nftId) : 1, "mint": mintAddress})
                         mintlog = false
                         claimlog = false
+                        mintTx = ""
+                        claimTx = ""
                       }
                     }
                 }

@@ -8,15 +8,16 @@ use anchor_spl::metadata::{
     create_master_edition_v3, create_metadata_accounts_v3, CreateMasterEditionV3,
     CreateMetadataAccountsV3, Metadata,
 };
-use anchor_spl::token::{mint_to, Mint, MintTo, Token, TokenAccount,};
+use anchor_spl::token::{mint_to, Mint, MintTo, Token, TokenAccount,Transfer,transfer};
 use mpl_token_metadata::types::{DataV2,Collection};
 use anchor_lang::solana_program::ed25519_program::ID as ED25519_ID;
 use anchor_lang::solana_program::system_instruction;
 use anchor_lang::solana_program::program::invoke;
 use anchor_lang::solana_program::program::invoke_signed;
+use std::fmt;
 
 
-declare_id!("BMKppstCd2kCnzNmVyWXdJmWmjJbfaWK56BKX8eGHKuC");
+declare_id!("FEBzcrkbvqocEv1tK3781or3QcDahtzW1QQEGxX2Ca3U");
 
 #[program]
 pub mod candy_nft_factory {
@@ -173,13 +174,25 @@ pub mod candy_nft_factory {
         Ok(())
     }
 
+    #[derive(AnchorSerialize, AnchorDeserialize, Debug, Clone)]
+    pub struct Reward {
+        from_ata:Pubkey,
+        amount:u64
+    }
 
-    pub fn claim(
-        ctx:Context<Claim>,
-        rewards:u64,
+    impl fmt::Display for Reward {
+        fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+            write!(f, "{{field1: {}, field2: {}}}", self.from_ata, self.amount)
+        }
+    }
+
+    pub fn claim<'c: 'info, 'info>(
+        ctx:Context<'_, '_, 'c, 'info,Claim<'c>>,
+        rewards:Vec<Reward>,
         signature:[u8;64]
     )->Result<()>{
 
+        msg!("==================1");
         let mut ix_ed25519_index = 0;
         while let Ok(ix) =load_instruction_at_checked(ix_ed25519_index,&ctx.accounts.ix_sysvar)   {
             if ix.program_id == ED25519_ID {
@@ -188,12 +201,21 @@ pub mod candy_nft_factory {
             ix_ed25519_index += 1;
         }
 
+        msg!("==================2");
+
         let ix = load_instruction_at_checked(ix_ed25519_index, &ctx.accounts.ix_sysvar)?;
+        msg!("==================3");
 
         let mut message = Vec::new();
         message.extend_from_slice(&ctx.accounts.payer.key.to_bytes());
         message.extend_from_slice(&ctx.accounts.mint.key().to_bytes());
-        message.extend_from_slice(&rewards.to_le_bytes());
+        // message.extend_from_slice(&rewards.to_le_bytes());
+        let reward_string = rewards.clone().into_iter()
+            .map(|reward| reward.to_string())
+            .collect::<Vec<String>>()
+            .join(", ");
+        msg!("reward: {}",reward_string);
+        message.extend_from_slice(reward_string.as_bytes());
 
         let owner = get_owner()?;
         verify_ed25519_ix(&ix, owner.as_ref(), &message, &signature)?;
@@ -207,34 +229,69 @@ pub mod candy_nft_factory {
             return  Err(CandyError::InvalidOwnerError.into());
         }
 
-        // let seeds = &[b"vault".as_ref()];
-        let (_contract_vault,bump) = Pubkey::find_program_address(&[b"vault"], ctx.program_id);
+        let (contract_vault,bump) = Pubkey::find_program_address(&[b"vault"], ctx.program_id);
 
-        let transfer_instruction = system_instruction::transfer(
-            &ctx.accounts.contract_vault.key(),
-            &ctx.accounts.payer.key(),
-            rewards,
-        );
+        let remaining_accounts_iter = &mut ctx.remaining_accounts.iter();
+        
+        for reward in &rewards {
 
-        // let seeds = &[&[b"vault"],&[bump]];
-        let seeds = &["vault".as_bytes(),&[bump]];
-        let seeds_binding = [&seeds[..]];
-        invoke_signed(
-            &transfer_instruction, 
-            &[
-                ctx.accounts.contract_vault.to_account_info(),
-                ctx.accounts.payer.to_account_info(),
-                ctx.accounts.system_program.to_account_info()
-            ], 
-            &seeds_binding
-        )?;
+            let from_ata = next_account_info(remaining_accounts_iter)?;
+            let to_ata = next_account_info(remaining_accounts_iter)?;
+            
+            if from_ata.key() != reward.from_ata{
+                return Err(CandyError::ATAError.into());
+            }
+            if reward.from_ata == contract_vault {
+                    // let seeds = &[b"vault".as_ref()];
+                let transfer_instruction = system_instruction::transfer(
+                    &ctx.accounts.contract_vault.key(),
+                    &ctx.accounts.payer.key(),
+                    reward.amount,
+                );
+            
+                // let seeds = &[&[b"vault"],&[bump]];
+                let seeds = &["vault".as_bytes(),&[bump]];
+                let seeds_binding = [&seeds[..]];
+                invoke_signed(
+                    &transfer_instruction, 
+                    &[
+                        ctx.accounts.contract_vault.to_account_info(),
+                        ctx.accounts.payer.to_account_info(),
+                        ctx.accounts.system_program.to_account_info()
+                    ], 
+                    &seeds_binding
+                )?;
+
+            }else {
+                let transfer_accounts = Transfer { 
+                    from: from_ata.to_account_info(),
+                    to: to_ata.to_account_info(),
+                    authority: ctx.accounts.payer.to_account_info()
+                };
+
+                transfer(
+                    CpiContext::new(
+                        ctx.accounts.token_program.to_account_info(),
+                        transfer_accounts
+                    ),
+                    reward.amount
+                )?; 
+                    
+            }
+        }
+
+
+
+
+
+
         
         ctx.accounts.claim_record.is_claimed = true;
 
         msg!("Claim NFT with details:");
         msg!("Payer: {}", ctx.accounts.payer.key());
         msg!("Mint Address: {}", ctx.accounts.mint.to_account_info().key());
-        msg!("Payment Amount: {}", rewards);
+        msg!("Payment Amount: {}", reward_string);
         Ok(())
     }
 
@@ -358,7 +415,6 @@ pub struct InitPhase<'info> {
     pub system_program: Program<'info, System>,
 }
 
-
 // #[instruction(phase_id:u64,nft_id: u64)]
 // #[instruction(phase_id:u64)]
 #[derive(Accounts)]
@@ -480,14 +536,22 @@ pub struct Claim<'info> {
     #[account(
         mut,
         seeds = [
-            b"vault".as_ref()
+            b"vault"
         ],
         bump,
     )]
-    pub contract_vault: UncheckedAccount<'info>
+    pub contract_vault: UncheckedAccount<'info>,
+
+
+    /// CHECK:
+    #[account(
+        seeds = [b"fund_holder"],
+        bump
+    )]
+    pub fund_holder:AccountInfo<'info>,
+
+    pub token_program: Program<'info, Token>,
 }
-
-
 
 #[error_code]
 pub enum CandyError {
@@ -508,7 +572,10 @@ pub enum CandyError {
     #[msg("Invalid owner")]
     InvalidOwnerError,
     #[msg("Only owner")]
-    OnlyOwner
+    OnlyOwner,
+    #[msg("ata error")]
+    ATAError,
+    
 }
 
 

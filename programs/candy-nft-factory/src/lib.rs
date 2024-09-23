@@ -17,7 +17,7 @@ use anchor_lang::solana_program::program::invoke_signed;
 use std::fmt;
 
 
-declare_id!("FEBzcrkbvqocEv1tK3781or3QcDahtzW1QQEGxX2Ca3U");
+declare_id!("BneJ4M84sbDQ8D8V5zGjao2c4vq4SWkje9x6MuRLGarE");
 
 #[program]
 pub mod candy_nft_factory {
@@ -182,7 +182,7 @@ pub mod candy_nft_factory {
 
     impl fmt::Display for Reward {
         fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-            write!(f, "{{field1: {}, field2: {}}}", self.from_ata, self.amount)
+            write!(f, "{{from_ata: {}, amount: {}}}", self.from_ata, self.amount)
         }
     }
 
@@ -230,8 +230,14 @@ pub mod candy_nft_factory {
         }
 
         let (contract_vault,bump) = Pubkey::find_program_address(&[b"vault"], ctx.program_id);
+        let vault_seeds = &["vault".as_bytes(),&[bump]];
+        let seeds_binding = [&vault_seeds[..]];
 
         let remaining_accounts_iter = &mut ctx.remaining_accounts.iter();
+
+        let fund_holder_seeds = &["fund_holder".as_bytes(), &[ctx.bumps.fund_holder]];
+
+        msg!("fund_holder: {:?}",ctx.accounts.fund_holder.key());
         
         for reward in &rewards {
 
@@ -250,8 +256,8 @@ pub mod candy_nft_factory {
                 );
             
                 // let seeds = &[&[b"vault"],&[bump]];
-                let seeds = &["vault".as_bytes(),&[bump]];
-                let seeds_binding = [&seeds[..]];
+
+                msg!("==================4");
                 invoke_signed(
                     &transfer_instruction, 
                     &[
@@ -261,30 +267,30 @@ pub mod candy_nft_factory {
                     ], 
                     &seeds_binding
                 )?;
+                msg!("==================5");
 
             }else {
+                msg!("from_ata: {}",from_ata.key());
+                msg!("to_ata: {}",to_ata.key());
                 let transfer_accounts = Transfer { 
                     from: from_ata.to_account_info(),
                     to: to_ata.to_account_info(),
-                    authority: ctx.accounts.payer.to_account_info()
+                    // authority: ctx.accounts.payer.to_account_info()
+                    authority:ctx.accounts.fund_holder.to_account_info()
                 };
-
+                msg!("==================6");
+        
                 transfer(
-                    CpiContext::new(
+                    CpiContext::new_with_signer(
                         ctx.accounts.token_program.to_account_info(),
-                        transfer_accounts
+                        transfer_accounts,
+                        &[fund_holder_seeds]
                     ),
                     reward.amount
                 )?; 
-                    
+                msg!("==================7");  
             }
         }
-
-
-
-
-
-
         
         ctx.accounts.claim_record.is_claimed = true;
 
@@ -506,7 +512,7 @@ pub struct Claim<'info> {
     pub payer: Signer<'info>,
 
     #[account(
-        init,
+        init_if_needed,
         payer = payer,
         space = 8 + ClaimRecord::INIT_SPACE,
         seeds = [&mint.key().to_bytes()],
@@ -548,7 +554,7 @@ pub struct Claim<'info> {
         seeds = [b"fund_holder"],
         bump
     )]
-    pub fund_holder:AccountInfo<'info>,
+    pub fund_holder:UncheckedAccount<'info>,
 
     pub token_program: Program<'info, Token>,
 }

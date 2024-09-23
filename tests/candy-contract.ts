@@ -2,7 +2,7 @@ import * as ed from "@noble/ed25519";
 import * as anchor from '@coral-xyz/anchor';
 import { Program } from "@coral-xyz/anchor";
 import { ComputeBudgetProgram, Keypair, PublicKey, SystemProgram } from "@solana/web3.js";
-import { assert } from "chai";
+import { assert, use } from "chai";
 // const ed  = require("@noble/ed25519")
 import { CandyNftFactory } from "../target/types/candy_nft_factory"; // Ensure the path is correct for your project
 import 'dotenv/config'
@@ -17,8 +17,10 @@ import { createMint, TOKEN_PROGRAM_ID } from "@solana/spl-token";
   const provider = anchor.AnchorProvider.env()
   anchor.setProvider(provider)
 
-  const secretKey = Uint8Array.from([230, 109, 50, 211, 175, 46, 93, 251, 3, 61, 145, 143, 249, 157, 49, 108, 76, 88, 183, 91, 128, 24, 243, 220, 59, 253, 3, 90, 199, 182, 196, 140, 127, 169, 53, 83, 83, 137, 243, 116, 227, 171, 199, 158, 192, 2, 196, 206, 59, 87, 63, 33, 121, 189, 78, 66, 252, 27, 76, 123, 75, 100, 175, 108]  )
+  const secretKey = Uint8Array.from([100,205,108,196,120,101,128,100,161,22,234,238,168,3,158,161,161,186,131,135,185,33,43,90,27,122,101,130,16,182,12,129,151,81,110,147,30,22,255,161,199,207,128,60,115,4,106,222,159,118,12,159,73,249,129,57,214,143,115,219,210,118,170,236] )
   const keyPair = Keypair.fromSecretKey(secretKey)
+
+  console.log("keyPair===========",keyPair.publicKey.toBase58())
 
 const init = async () => {
 
@@ -53,11 +55,11 @@ const init = async () => {
 }
 
 const initFund = async ()=>{
+  const usdtMint = "5gCDxsFnGJZw5k9cu5A4EhzfzCBpGgqnVt3ZBhEng7Bh"
   const candyNftFactory = anchor.workspace.CandyNftFactory as Program<CandyNftFactory>
-
-
   const [fund_holder,bump] = PublicKey.findProgramAddressSync([Buffer.from("fund_holder")],candyNftFactory.programId)
-  const ata = await getOrCreateAssociatedTokenAccount(provider.connection,keyPair,new PublicKey("5gCDxsFnGJZw5k9cu5A4EhzfzCBpGgqnVt3ZBhEng7Bh"),fund_holder,true)
+  console.log("fund_holder",fund_holder.toBase58())
+  const ata = await getOrCreateAssociatedTokenAccount(provider.connection,keyPair,new PublicKey(usdtMint),fund_holder,true)
   console.log("ata: ",ata)
 }
 
@@ -186,19 +188,34 @@ const claim = async () => {
   const tokenAccount = await getAssociatedTokenAddress(mint,provider.publicKey)  //user NFT token account
   console.log("tokenAccount====",tokenAccount.toBase58())
 
-  const [contractVault,contractVaultBump] = PublicKey.findProgramAddressSync([Buffer.from("contract_vault")],candyNftFactory.programId)
+  const [contractVault,contractVaultBump] = PublicKey.findProgramAddressSync([Buffer.from("vault")],candyNftFactory.programId)
   const [fundHolder,fundHolderBump] = PublicKey.findProgramAddressSync([Buffer.from("fund_holder")],candyNftFactory.programId)
   const usdtMint = new PublicKey("5gCDxsFnGJZw5k9cu5A4EhzfzCBpGgqnVt3ZBhEng7Bh")
   const fundHolderUsdtAta = await getOrCreateAssociatedTokenAccount(provider.connection,keyPair,usdtMint,fundHolder,true)
   const user = provider.wallet.publicKey
+  console.log("user: ",user.toBase58())
   const userUsdtAta = await getOrCreateAssociatedTokenAccount(provider.connection,keyPair,usdtMint,user)
 
-  const rewards = [{fromAta:fundHolderUsdtAta.address,amount:new anchor.BN(1000)},{fromAta:contractVault,amount:new anchor.BN(10000)}]
+  const rewards = [{fromAta:contractVault,amount:new anchor.BN(10000)},{fromAta:fundHolderUsdtAta.address,amount:new anchor.BN(1000)}]
   // const msg = Uint8Array.from([...provider.wallet.publicKey.toBuffer(),...mint.toBuffer() ,...rewards.toBuffer("le",8)])
-  console.log("rewardstring",rewards.toString())
-  const msg = Uint8Array.from([...provider.wallet.publicKey.toBuffer(),...mint.toBuffer() ,...Buffer.from(rewards.toString())])
+
+  let rewardString = "{"
+  rewards.map((reward)=>{
+    rewardString = rewardString+ "from_ata: " + reward.fromAta +", amount: " + reward.amount.toNumber()+"}, {"
+  })
+
+  rewardString = rewardString.slice(0,rewardString.length-3).trim()
+
+  console.log("rewardString:  ",rewardString)
+
+  const msg = Uint8Array.from([...provider.wallet.publicKey.toBuffer(),...mint.toBuffer() ,...Buffer.from(rewardString)])
   const signature = await ed.sign(msg,keyPair.secretKey.slice(0,32))
 
+  console.log("contractVault",contractVault)
+  console.log("fundHolder",fundHolder)
+  console.log("fundHolderUsdtAta",fundHolderUsdtAta.address)
+  console.log("user",user)
+  console.log("userUsdtAta",userUsdtAta.address)
 
   let tx = new anchor.web3.Transaction()
   .add(
@@ -217,13 +234,25 @@ const claim = async () => {
       await candyNftFactory.methods
     // .claim(rewards,Array.from(signature))
 
-    .claim([{fromAta:fundHolderUsdtAta.address,amount:new anchor.BN(1000)},{fromAta:contractVault,amount:new anchor.BN(10000)}],Array.from(signature))
+    .claim(rewards,Array.from(signature))
     .accounts({
       payer: provider.wallet.publicKey,
       mint,
-      tokenAccount
+      tokenAccount,
+  
+      
     })
     .remainingAccounts([
+      {
+        pubkey:contractVault,
+        isSigner:false,
+        isWritable:true
+      },
+      {
+        pubkey:user,
+        isSigner:false,
+        isWritable:true
+      },
       {
         pubkey:fundHolderUsdtAta.address,
         isSigner:false,
@@ -234,16 +263,6 @@ const claim = async () => {
         isSigner:false,
         isWritable:true
       },
-      {
-        pubkey:contractVault,
-        isSigner:false,
-        isWritable:true
-      },
-      {
-        pubkey:user,
-        isSigner:false,
-        isWritable:true
-      }
     ])
     .signers([])
     .instruction()
@@ -254,24 +273,24 @@ const claim = async () => {
   tx.recentBlockhash = blockhash;
   tx.feePayer = provider.wallet.publicKey;
   // tx.sign(keyPair)
+  
   const signedTx = await provider.wallet.signTransaction(tx)
 
   console.log("=============260")
 
-  try{
-    const hash = await provider.connection.sendRawTransaction(signedTx.serialize())
-  }catch(error){
-    console.log("error:",error)
-  }
 
-  
-  // console.log("hash=====>",hash)
+    const hash = await provider.connection.sendRawTransaction(signedTx.serialize())
+    console.log("hash=====>",hash)
+
+
+
 }
 
 
 const issuseToken = async ()=>{
 
-  const secretKey = Uint8Array.from([230, 109, 50, 211, 175, 46, 93, 251, 3, 61, 145, 143, 249, 157, 49, 108, 76, 88, 183, 91, 128, 24, 243, 220, 59, 253, 3, 90, 199, 182, 196, 140, 127, 169, 53, 83, 83, 137, 243, 116, 227, 171, 199, 158, 192, 2, 196, 206, 59, 87, 63, 33, 121, 189, 78, 66, 252, 27, 76, 123, 75, 100, 175, 108]  )
+  // const secretKey = Uint8Array.from([230, 109, 50, 211, 175, 46, 93, 251, 3, 61, 145, 143, 249, 157, 49, 108, 76, 88, 183, 91, 128, 24, 243, 220, 59, 253, 3, 90, 199, 182, 196, 140, 127, 169, 53, 83, 83, 137, 243, 116, 227, 171, 199, 158, 192, 2, 196, 206, 59, 87, 63, 33, 121, 189, 78, 66, 252, 27, 76, 123, 75, 100, 175, 108]  )
+  const secretKey = Uint8Array.from([100,205,108,196,120,101,128,100,161,22,234,238,168,3,158,161,161,186,131,135,185,33,43,90,27,122,101,130,16,182,12,129,151,81,110,147,30,22,255,161,199,207,128,60,115,4,106,222,159,118,12,159,73,249,129,57,214,143,115,219,210,118,170,236])
   const keyPair = Keypair.fromSecretKey(secretKey)
   // const mint = await createMint(
   //   connection,      // Solana 连接对象
@@ -285,21 +304,21 @@ const issuseToken = async ()=>{
   console.log("kp: ",keyPair.publicKey.toBase58())
   console.log("pk: ",provider.wallet.publicKey.toBase58())
 
-  // const mint = await createMint(
-  //   provider.connection,
-  //   keyPair,
-  //   provider.wallet.publicKey,
-  //   null,
-  //   9,
-  // )
+  const mint = await createMint(
+    provider.connection,
+    keyPair,
+    provider.wallet.publicKey,
+    null,
+    9,
+  )
   // return 
-  // console.log(`Token mint: ${mint.toBase58()}`);
+  console.log(`Token mint: ${mint.toBase58()}`);
   // const ata = await getOrCreateAssociatedTokenAccount(provider.connection,keyPair,new PublicKey("5gCDxsFnGJZw5k9cu5A4EhzfzCBpGgqnVt3ZBhEng7Bh"),keyPair.publicKey)
   // console.log(`ata: ${ata.address}`);
 
 
-  const tx = await mintTo(provider.connection,keyPair,new PublicKey("5gCDxsFnGJZw5k9cu5A4EhzfzCBpGgqnVt3ZBhEng7Bh"),new PublicKey("EkNraY2uFaXqGfFFnPcE7CxrMMZMcscQth66g3aXGFgs"),keyPair,100000000 * 1e9)
-  console.log(`tx: ${tx}`);
+  // const tx = await mintTo(provider.connection,keyPair,new PublicKey("5gCDxsFnGJZw5k9cu5A4EhzfzCBpGgqnVt3ZBhEng7Bh"),new PublicKey("EkNraY2uFaXqGfFFnPcE7CxrMMZMcscQth66g3aXGFgs"),keyPair,100000000 * 1e9)
+  // console.log(`tx: ${tx}`);
   
 }
 
@@ -352,3 +371,4 @@ async function getUserNFTs(programId:PublicKey,phaseId:number,user:PublicKey) {
 
   return userNFTs
 }
+

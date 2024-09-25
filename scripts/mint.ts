@@ -9,14 +9,6 @@ import { numberToBuffer, hexStringToUint8Array, uint8ArrayToHexString } from "./
 const provider = anchor.AnchorProvider.env();
 anchor.setProvider(provider);
 
-// 加载 IDL 和合约地址
-//const idl = require('../target/idl/candy_nft_factory.json'); 
-/*
-const programId = new anchor.web3.PublicKey('7sivPuNctFv6j32a1TniBZjtLfx5qaDZAuURjgkZoBDi'); 
-
-// 初始化程序
-const program = new anchor.Program(idl, programId, provider);
-*/
 
 async function main() {
 
@@ -41,7 +33,6 @@ async function main() {
 
   const authority = provider.wallet.publicKey;
   const phaseId = new anchor.BN(1)
-  const nftId = new anchor.BN(2)
   const lamports = new anchor.BN(1000000)
   const time =Math.floor(Date.now()/1000) + 60 * 5 // 过期时间5分钟
   console.log("expireAt: ",time)
@@ -61,17 +52,6 @@ async function main() {
     console.log("sig1",uint8ArrayToHexString(sig1))
 
 
-  // const tx = await candyNftFactory.methods
-  //   // .mintNft(phaseId,nftId)
-  //   .mintNft(provider.wallet.publicKey,lamports,expireAt,Array.from(signature))
-  //   .accounts({
-  //     authority: provider.wallet.publicKey,
-  //     payer: provider.wallet.publicKey,
-  //     // metadataProgram: TOKEN_METADATA_PROGRAM_ID,
-  //     phase: phasePda,
-  //   })
-  //   .signers([])
-  //   .rpc();
   let tx = new anchor.web3.Transaction()
   .add(
       // Ed25519 instruction
@@ -82,12 +62,8 @@ async function main() {
       })
   )
   .add(
-      // Our instruction
       await candyNftFactory.methods
-    // .mintNft(phaseId,nftId)
     .mintNft(lamports,expireAt,Array.from(signature))
-    // .mintNft(expireAt,Buffer.from(msg),Array.from(signature))
-    // .mintNft(provider.wallet.publicKey,lamports,expireAt,Buffer.from(msg),Array.from(signature))
     .accounts({
       authority: provider.wallet.publicKey,
       payer: provider.wallet.publicKey,

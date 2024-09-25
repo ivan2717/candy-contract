@@ -78,7 +78,7 @@ async function getData(uri: string): Promise<ApiResponse> {
 
 async function filterProgramLogs(programPublicKey: PublicKey) {
   const connection = new Connection("https://solana-devnet.g.alchemy.com/v2/cJkK2SdqwYHK-8eElur2mNY1zbuN5do4", 'confirmed');
-  const deployedAt = '3oHoPAbGGKiUABik2bYvYDpeCSkEZETCyYCRdENdWiTgNsJYaqehczwg4e6fLrNjH82mTxzrMLqYP44rZPLtsn2M'
+  const deployedAt = '5geYcwP1cWXNcCXWa4jVHthdarR9StwksrYobDBTXzGh3FtWMLqQPvNWdmb27XZMBXDdSMph76L2BJ4peWdeMUM2'
 
   console.log(`Fetching signatures for program ID: ${programPublicKey.toBase58()}`);
   let beforeSignature: string | undefined;
@@ -92,7 +92,10 @@ async function filterProgramLogs(programPublicKey: PublicKey) {
   let signature0: string | undefined;
   let payer: string;
   let tokenId: string;
+  let mintTx: string;
+  let claimTx: string;
   let paymentAmount: number;
+  let claimAmount : string;
   let mintAddress: string;
   
   if (!untilSignature) {
@@ -149,6 +152,7 @@ async function filterProgramLogs(programPublicKey: PublicKey) {
                       const tokenIdMatch = log.match(/Token ID: (\d+)/);
                       const mintAddressMatch = log.match(/Mint Address: (\w+)/);
                       const paymentAmountMatch = log.match(/Payment Amount: (\d+)/);
+                      const claimAmountMatch = log.match(/Payment Amount: (.+)/);
 
                       if (payerMatch) {
                         payer = payerMatch[1];
@@ -159,11 +163,15 @@ async function filterProgramLogs(programPublicKey: PublicKey) {
                       }
                       if (mintAddressMatch) {
                           mintAddress = mintAddressMatch[1]
-                          console.log("tokenId", tokenId)
+                          console.log('Mint Address:', mintAddress);
                       }
-                      if (paymentAmountMatch) {
-                        paymentAmount = Number(paymentAmountMatch[1])
-                        console.log('Mint Address:', mintAddress);
+                      if (paymentAmountMatch || claimAmountMatch) {
+                        paymentAmount = paymentAmountMatch ? Number(paymentAmountMatch[1]) : 0
+                        claimAmount =  claimAmountMatch ? claimAmountMatch[1] : ""
+                        console.log('Payment :', paymentAmount);
+                        console.log('Claim:', claimAmount);
+                        console.log("action", mintlog ? "mint": "")
+                        console.log("action", claimlog ? "claim": "")
                         let data = await getData(`user/${payer}`)
                         if (data.code != 200) {
                             await postData(`user/new`, {"address": payer, "score": 0})
@@ -174,6 +182,9 @@ async function filterProgramLogs(programPublicKey: PublicKey) {
                             throw `Failed to get user info ${payer}`
                         }
                         let nftId = await redis.get(`${payer}_${paymentAmount}`)
+                        let _nft = await getData(`user/nft/mint?address=${mintAddress}`)
+                        mintTx  = mintlog ? signature : (_nft.code == 200 && _nft.data ? _nft.data.txid : "")
+                        claimTx = claimlog ? signature : (_nft.code == 200 && _nft.data ? _nft.data.claimTx : "")
                         if (!nftId) {
                             const project = await getData("project/1")
                             project.data.NFT.map((nft, i) => {
@@ -184,14 +195,12 @@ async function filterProgramLogs(programPublicKey: PublicKey) {
                         }
                         if (mintlog) {
                             console.log("new nft")
-                            await postData("user/nft", {"tokenId": tokenId, "userId": data.data.id, "txId": signature, "claimTx": "", "nftId": nftId ? Number(nftId) : 1, "mint": mintAddress})
+                            await postData("user/nft", {"tokenId": tokenId, "userId": data.data.id, "txId": signature, "claimTx": claimTx, "nftId": nftId ? Number(nftId) : 1, "mint": mintAddress})
                         }
                         if (claimlog) {
                             console.log("update claim")
-                            let _nft = await getData(`user/nft/mint?address=${mintAddress}`)
-                            console.log 
                             if (_nft.code == 20)
-                                _body = {"tokenId": _nft.data.tokenId, "userId": data.data.id, "txId": "", "claimTx": signature, "nftId": nftId ? Number(nftId) : 1, "mint": mintAddress}
+                                _body = {"tokenId": _nft.data.tokenId, "userId": data.data.id, "txId": mintTx, "claimTx": signature, "nftId": nftId ? Number(nftId) : 1, "mint": mintAddress}
                             else 
                                 _body = {"tokenId": "", "userId": data.data.id, "txId": "", "claimTx": signature, "nftId": nftId ? Number(nftId) : 1, "mint": mintAddress}
                             console.log(_body)

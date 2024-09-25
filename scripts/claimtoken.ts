@@ -160,7 +160,6 @@ async function getUserNFTs(programId:PublicKey,phaseId:number,user:PublicKey) {
   nftAccounts.map(async (account) => {
     mintList.push(new PublicKey(account.account.data.parsed.info.mint))
   });
-    //console.log(mintList)
 
   const mx = Metaplex.make(provider.connection)
   const nfts = await mx.nfts().findAllByMintList({
@@ -173,7 +172,6 @@ async function getUserNFTs(programId:PublicKey,phaseId:number,user:PublicKey) {
     [Buffer.from("collection"),phaseIdBytes], // seeds
     programId
   );
-    console.log("collectionPda", collectionPda.toBase58())
 
   const userNFTs = nfts.filter((nft)=>{
       /*
@@ -188,3 +186,4 @@ async function getUserNFTs(programId:PublicKey,phaseId:number,user:PublicKey) {
 
   return userNFTs
 }
+

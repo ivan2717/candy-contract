@@ -1,15 +1,19 @@
 import * as ed from "@noble/ed25519";
 import * as anchor from '@coral-xyz/anchor';
 import { Program } from "@coral-xyz/anchor";
-import { ComputeBudgetProgram, Keypair, PublicKey, SystemProgram } from "@solana/web3.js";
+import { ComputeBudgetProgram, Keypair, PublicKey, SystemProgram, Transaction } from "@solana/web3.js";
 import { assert, use } from "chai";
 // const ed  = require("@noble/ed25519")
 import { CandyNftFactory } from "../target/types/candy_nft_factory"; // Ensure the path is correct for your project
 import 'dotenv/config'
 import { Metadata, Metaplex } from "@metaplex-foundation/js";
 import { min } from "bn.js";
-import { getAssociatedTokenAddress, getOrCreateAssociatedTokenAccount, mintTo } from "@solana/spl-token";
+import { AuthorityType, createSetAuthorityInstruction, getAssociatedTokenAddress, getOrCreateAssociatedTokenAccount, mintTo } from "@solana/spl-token";
 import { createMint, TOKEN_PROGRAM_ID } from "@solana/spl-token";
+import {
+  UpdateMetadataAccountV2InstructionData,
+  DataV2,
+} from '@metaplex-foundation/mpl-token-metadata';
 
   // const provider = anchor.AnchorProvider.local();
 
@@ -87,6 +91,7 @@ const mintNFT = async () => {
   const authority = provider.wallet.publicKey;
   const phaseId = new anchor.BN(1)
   const nftId = new anchor.BN(1)
+  const classs = 1
   const lamports = new anchor.BN(1000000000)
   // const time =Math.floor(Date.now()/1000) + 60 * 5 // 过期时间5分钟
   const time = 1728718561
@@ -94,7 +99,7 @@ const mintNFT = async () => {
   const expireAt = new anchor.BN(time)
   // const expireAt = Math.floor(Date.now()/1000) + 60 * 60
   console.log("user",provider.wallet.publicKey.toBase58())
-  const msg = Uint8Array.from([...provider.wallet.publicKey.toBuffer(),...lamports.toBuffer("le",8),...expireAt.toBuffer("le",8)])
+  const msg = Uint8Array.from([...provider.wallet.publicKey.toBuffer(),...new anchor.BN(classs).toBuffer(),...lamports.toBuffer("le",8),...expireAt.toBuffer("le",8)])
   console.log("=====msg====",msg)
   const secretKey = Uint8Array.from([100,205,108,196,120,101,128,100,161,22,234,238,168,3,158,161,161,186,131,135,185,33,43,90,27,122,101,130,16,182,12,129,151,81,110,147,30,22,255,161,199,207,128,60,115,4,106,222,159,118,12,159,73,249,129,57,214,143,115,219,210,118,170,236])
 
@@ -122,7 +127,7 @@ const mintNFT = async () => {
   )
   .add(
       await candyNftFactory.methods
-    .mintNft(lamports,expireAt,Array.from(signature))
+    .mintNft(classs,lamports,expireAt,Array.from(signature))
     .accounts({
       authority: provider.wallet.publicKey,
       payer: provider.wallet.publicKey,
@@ -327,10 +332,21 @@ const issuseToken = async ()=>{
 
 // init()
 // initFund()
-// mintNFT()
-claim()
+mintNFT()
+// claim()
 
 // issuseToken()
+
+const transaction = new Transaction();
+
+// 创建设置权限的指令
+// const setAuthorityIx = createSetAuthorityInstruction(
+//     new PublicKey("2CLSQsWTXYcDVFAiR8w69ADShRL8qoYHFZ1TFeAhNAWF"),
+//     new PublicKey("BBgai5MfC5s6z944bXTxFK9FpzR5uLkLBpFBhBgPB6LT"),
+//     null, // 将 update authority 设置为 null
+//     AuthorityType.
+// );
+
 
 
 function numberToBuffer(num: number): Buffer {

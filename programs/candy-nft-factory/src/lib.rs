@@ -17,7 +17,7 @@ use anchor_lang::solana_program::program::invoke_signed;
 use std::fmt;
 
 
-declare_id!("BneJ4M84sbDQ8D8V5zGjao2c4vq4SWkje9x6MuRLGarE");
+declare_id!("8UsCUBBqabmNeYGFHAEJHBovmLkTAQ3VNaH5uHQCnbsb");
 
 #[program]
 pub mod candy_nft_factory {
@@ -47,6 +47,7 @@ pub mod candy_nft_factory {
 
     pub fn mint_nft(
         ctx:Context<MintNFT>,
+        class:u8,
         lamports:u64,
         expire_at:i64,
         signature:[u8;64]
@@ -64,16 +65,13 @@ pub mod candy_nft_factory {
 
         let mut message = Vec::new();
         message.extend_from_slice(&ctx.accounts.payer.key.to_bytes());
+        message.extend_from_slice(&class.to_le_bytes());
         message.extend_from_slice(&lamports.to_le_bytes());
         message.extend_from_slice(&expire_at.to_le_bytes());
 
         let owner = get_owner()?;
         verify_ed25519_ix(&ix, owner.as_ref(), &message, &signature)?;
         msg!("Verify Success");
-
-        // if ctx.accounts.authority.key() != owner {
-        //     return Err(CandyError::OnlyOwner.into());
-        // }
         
 
         if ctx.accounts.phase.current_nft_id >= ctx.accounts.phase.max_supply {
@@ -117,6 +115,7 @@ pub mod candy_nft_factory {
             }, 
             &seeds_binding
         );
+
         mint_to(cpi_context, 1)?;
 
         let cpi_context = CpiContext::new_with_signer(
@@ -134,7 +133,7 @@ pub mod candy_nft_factory {
         );
 
         let (collection_pda,_bump) = Pubkey::find_program_address(&["collection".as_bytes(),phase_id_bytes.as_ref()], ctx.program_id);
-
+    
         let data_v2 = DataV2 { 
             name:ctx.accounts.phase.name.clone(), 
             symbol:ctx.accounts.phase.symbol.clone(), 
@@ -145,8 +144,8 @@ pub mod candy_nft_factory {
             uses: None
          };
 
-         create_metadata_accounts_v3(cpi_context,data_v2,true,true,None)?;
-
+         create_metadata_accounts_v3(cpi_context,data_v2,false,true,None)?;
+        
          let cpi_context = CpiContext::new_with_signer(
             ctx.accounts.metadata_program.to_account_info(),
             CreateMasterEditionV3 { 
@@ -163,13 +162,15 @@ pub mod candy_nft_factory {
             &seeds_binding
         );
 
-        create_master_edition_v3(cpi_context,Some(0))?;
+        create_master_edition_v3(cpi_context,None)?;
+
 
         msg!("Minting NFT with details:");
         msg!("Payer: {}", ctx.accounts.payer.key());
         msg!("Token ID: {}", nft_id);
         msg!("Mint Address: {}", ctx.accounts.mint.to_account_info().key());
         msg!("Payment Amount: {}", lamports);
+        msg!("NFT class: {}",class);
 
         Ok(())
     }
@@ -192,7 +193,6 @@ pub mod candy_nft_factory {
         signature:[u8;64]
     )->Result<()>{
 
-        msg!("==================1");
         let mut ix_ed25519_index = 0;
         while let Ok(ix) =load_instruction_at_checked(ix_ed25519_index,&ctx.accounts.ix_sysvar)   {
             if ix.program_id == ED25519_ID {
@@ -201,10 +201,7 @@ pub mod candy_nft_factory {
             ix_ed25519_index += 1;
         }
 
-        msg!("==================2");
-
         let ix = load_instruction_at_checked(ix_ed25519_index, &ctx.accounts.ix_sysvar)?;
-        msg!("==================3");
 
         let mut message = Vec::new();
         message.extend_from_slice(&ctx.accounts.payer.key.to_bytes());
@@ -256,8 +253,6 @@ pub mod candy_nft_factory {
                 );
             
                 // let seeds = &[&[b"vault"],&[bump]];
-
-                msg!("==================4");
                 invoke_signed(
                     &transfer_instruction, 
                     &[
@@ -267,7 +262,6 @@ pub mod candy_nft_factory {
                     ], 
                     &seeds_binding
                 )?;
-                msg!("==================5");
 
             }else {
                 msg!("from_ata: {}",from_ata.key());
@@ -278,7 +272,6 @@ pub mod candy_nft_factory {
                     // authority: ctx.accounts.payer.to_account_info()
                     authority:ctx.accounts.fund_holder.to_account_info()
                 };
-                msg!("==================6");
         
                 transfer(
                     CpiContext::new_with_signer(
@@ -288,7 +281,6 @@ pub mod candy_nft_factory {
                     ),
                     reward.amount
                 )?; 
-                msg!("==================7");  
             }
         }
         

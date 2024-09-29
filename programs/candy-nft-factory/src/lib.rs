@@ -39,7 +39,7 @@ pub mod candy_nft_factory {
         ctx.accounts.phase.max_supply = max_supply;
         ctx.accounts.phase.name = name;
         ctx.accounts.phase.symbol = symbol;
-        // ctx.accounts.phase.base_uri = base_uri;
+        ctx.accounts.phase.base_uri = base_uri;
         ctx.accounts.phase.current_nft_id = 0;
         ctx.accounts.phase.signer = ctx.accounts.authority.key();
         Ok(())
@@ -50,8 +50,7 @@ pub mod candy_nft_factory {
         class:u8,
         lamports:u64,
         expire_at:i64,
-        signature:[u8;64],
-        uri:String,
+        signature:[u8;64]
     ) -> Result<()>{
 
         let mut ix_ed25519_index = 0;
@@ -138,8 +137,7 @@ pub mod candy_nft_factory {
         let data_v2 = DataV2 { 
             name:ctx.accounts.phase.name.clone(), 
             symbol:ctx.accounts.phase.symbol.clone(), 
-            // uri:ctx.accounts.phase.base_uri.clone() + &nft_id.to_string() +".png", 
-            uri,
+            uri:ctx.accounts.phase.base_uri.clone() + &nft_id.to_string() +".png", 
             seller_fee_basis_points: 0,
             creators: None,
             collection: Some(Collection { verified: false, key: collection_pda }),
@@ -383,8 +381,8 @@ pub struct Phase {
     pub phase_id: u64,
     pub current_nft_id: u64,
     pub max_supply:u64,
-    // #[max_len(200)]
-    // pub base_uri: String,
+    #[max_len(200)]
+    pub base_uri: String,
     #[max_len(20)]
     pub name: String,
     #[max_len(10)]

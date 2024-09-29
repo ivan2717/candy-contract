@@ -332,8 +332,8 @@ const issuseToken = async ()=>{
 
 // init()
 // initFund()
-mintNFT()
-// claim()
+// mintNFT()
+claim()
 
 // issuseToken()
 

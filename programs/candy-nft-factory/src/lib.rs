@@ -17,7 +17,7 @@ use anchor_lang::solana_program::program::invoke_signed;
 use std::fmt;
 
 
-declare_id!("5VLkGoBrZMw5oUuCr5WzCg1KFEwyJVPuQVkjFvz6qwtq");
+declare_id!("FrDQ9AM27BbZneSWFUSFVfmNH8b2NxuEtQAWaXGuQPVa");
 
 #[program]
 pub mod candy_nft_factory {
@@ -28,7 +28,6 @@ pub mod candy_nft_factory {
         ctx:Context<InitPhase>,
         name:String,
         symbol:String,
-        base_uri:String,
         max_supply:u64,
     ) -> Result<()>{
         let owner = get_owner()?;
@@ -39,7 +38,7 @@ pub mod candy_nft_factory {
         ctx.accounts.phase.max_supply = max_supply;
         ctx.accounts.phase.name = name;
         ctx.accounts.phase.symbol = symbol;
-        ctx.accounts.phase.base_uri = base_uri;
+        // ctx.accounts.phase.base_uri = base_uri;
         ctx.accounts.phase.current_nft_id = 0;
         ctx.accounts.phase.signer = ctx.accounts.authority.key();
         Ok(())
@@ -50,6 +49,7 @@ pub mod candy_nft_factory {
         class:u8,
         lamports:u64,
         expire_at:i64,
+        uri:String,
         signature:[u8;64]
     ) -> Result<()>{
 
@@ -68,6 +68,7 @@ pub mod candy_nft_factory {
         message.extend_from_slice(&class.to_le_bytes());
         message.extend_from_slice(&lamports.to_le_bytes());
         message.extend_from_slice(&expire_at.to_le_bytes());
+        message.extend_from_slice(uri.as_bytes());
 
         let owner = get_owner()?;
         verify_ed25519_ix(&ix, owner.as_ref(), &message, &signature)?;
@@ -137,7 +138,8 @@ pub mod candy_nft_factory {
         let data_v2 = DataV2 { 
             name:ctx.accounts.phase.name.clone(), 
             symbol:ctx.accounts.phase.symbol.clone(), 
-            uri:ctx.accounts.phase.base_uri.clone() + &nft_id.to_string() +".png", 
+            // uri:ctx.accounts.phase.base_uri.clone() + &nft_id.to_string() +".png", 
+            uri,
             seller_fee_basis_points: 0,
             creators: None,
             collection: Some(Collection { verified: false, key: collection_pda }),
@@ -381,8 +383,8 @@ pub struct Phase {
     pub phase_id: u64,
     pub current_nft_id: u64,
     pub max_supply:u64,
-    #[max_len(200)]
-    pub base_uri: String,
+    // #[max_len(200)]
+    // pub base_uri: String,
     #[max_len(20)]
     pub name: String,
     #[max_len(10)]

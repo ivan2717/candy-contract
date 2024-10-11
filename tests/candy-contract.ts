@@ -328,13 +328,60 @@ const issuseToken = async ()=>{
   
 }
 
+const withdraw = async () => {
+  const candyNftFactory = anchor.workspace.CandyNftFactory as Program<CandyNftFactory>
+  console.log("programId======",candyNftFactory.programId)
+
+  const [contractVault,contractVaultBump] = PublicKey.findProgramAddressSync([Buffer.from("vault")],candyNftFactory.programId)
+  const [fundHolder,fundHolderBump] = PublicKey.findProgramAddressSync([Buffer.from("fund_holder")],candyNftFactory.programId)
+  const usdtMint = new PublicKey("5gCDxsFnGJZw5k9cu5A4EhzfzCBpGgqnVt3ZBhEng7Bh")
+  const fundHolderUsdtAta = await getOrCreateAssociatedTokenAccount(provider.connection,keyPair,usdtMint,fundHolder,true)
+  
+  console.log("contractVault:",contractVault.toBase58())
+  console.log("fundHolderUsdtAta:",fundHolderUsdtAta.address.toBase58())
+  const user = provider.wallet.publicKey
+  console.log("user: ",user.toBase58())
+  const userUsdtAta = await getOrCreateAssociatedTokenAccount(provider.connection,keyPair,usdtMint,user)
+
+  const tx = await candyNftFactory.methods
+  .withdraw([new anchor.BN("10000"),new anchor.BN("20000")])
+  .remainingAccounts([
+    {
+      pubkey:contractVault,
+      isSigner:false,
+      isWritable:true
+    },
+    {
+      pubkey:user,
+      isSigner:false,
+      isWritable:true
+    },
+    {
+      pubkey:fundHolderUsdtAta.address,
+      isSigner:false,
+      isWritable:true
+    },
+    {
+      pubkey:userUsdtAta.address,
+      isSigner:false,
+      isWritable:true
+    },
+  ]).signers([])
+  .rpc()
+
+  console.log("tx:",tx)
+}
+
 
 
 
 // init()
 // initFund()
-mintNFT()
+// mintNFT()
 // claim()
+
+withdraw()
+
 
 // issuseToken()
 
